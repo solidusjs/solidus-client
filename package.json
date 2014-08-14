@@ -1,0 +1,24 @@
+{
+  "name": "solidus-client",
+  "version": "0.0.0",
+  "main": "index.js",
+  "author": {
+    "name": "Joannic Laborde",
+    "email": "joannic@sparkart.com",
+    "url": "http://www.sparkart.com"
+  },
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/solidusjs/solidus-client/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/solidusjs/solidus-client.git"
+  },
+  "devDependencies": {},
+  "dependencies": {
+    "handlebars-helper": ">=0.0.12",
+    "hyperquest": "~0.3.0",
+    "underscore": "~1.6.0"
+  }
+}
