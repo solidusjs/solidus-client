@@ -15,10 +15,12 @@
     "type": "git",
     "url": "https://github.com/solidusjs/solidus-client.git"
   },
-  "devDependencies": {},
+  "devDependencies": {
+    "nock": "~0.44.3"
+  },
   "dependencies": {
     "handlebars-helper": ">=0.0.12",
-    "hyperquest": "~0.3.0",
+    "superagent": "~0.18.2",
     "underscore": "~1.6.0"
   }
 }
