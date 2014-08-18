@@ -23,6 +23,7 @@ describe('View', function() {
     it('with all options', function(done) {
       var view = {
         resources: resources,
+        params: params,
         preprocessor: preprocessor,
         template: template,
         template_options: template_options
@@ -31,7 +32,6 @@ describe('View', function() {
       var solidus_client = new SolidusClient();
       solidus_client
         .render(view)
-        .params(params)
         .end(function(html) {
           assert.equal(html, 'success! helped');
           done();
@@ -54,7 +54,7 @@ describe('View', function() {
       var solidus_client = new SolidusClient();
       solidus_client
         .render(template)
-        .params({a: 'com'})
+        .params(params)
         .templateOptions(template_options)
         .get(resources)
         .then(preprocessor)
