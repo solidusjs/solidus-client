@@ -33,7 +33,9 @@ var preprocessor = function(context) {
   context.blogs_count = context.resources.blogs.length;
   return context;
 };
+```
 
+   ```javascript
 // Async
 var preprocessor = function(context, callback) {
   context.blogs_count = context.resources.blogs.length;
