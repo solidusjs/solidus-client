@@ -4,7 +4,7 @@ Render your [Solidus](https://github.com/solidusjs/solidus) views in the browser
 
  1. Fetch data from static and dynamic resources, and make it available in the context.
  2. Add and transform the context with custom preprocessors.
- 3. Render [Handlebars](http://handlebarsjs.com/) templates, with partials and helpers. The [https://github.com/SparkartGroupInc/handlebars-helper](handlebars-helper) helpers are automatically made available.
+ 3. Render [Handlebars](http://handlebarsjs.com/) templates, with partials and helpers. The [handlebars-helper](https://github.com/SparkartGroupInc/handlebars-helper) helpers are automatically made available.
 
 Refer to the Solidus documentation to know more about those concepts.
 
@@ -13,21 +13,21 @@ Refer to the Solidus documentation to know more about those concepts.
 Rendering a template starts with the `render` function call, and ends with the `end` callback. The various options can be passed directly to the `render` method as a config object, or by chaining method calls on the returned object.
 
  - `resources` - Object of named urls. The urls can have dynamic segments, which will be replaced by the matching `params`.
-```javascript
+   ```javascript
 var resources = {
   blogs: 'http://my-site.com/blogs?page={page}'
 };
 ```
 
  - `params` - Object of named values. The values will be interpolated into the dynamic resource urls.
-```javascript
+   ```javascript
 var params = {
   page: 123
 };
 ```
 
  - `preprocessor` - Function that modifies the context. The preprocessor is run after the resources are fetched, but before the template is rendered.
-```javascript
+   ```javascript
 // Sync
 var preprocessor = function(context) {
   context.blogs_count = context.resources.blogs.length;
@@ -49,12 +49,12 @@ var preprocessor = function(context, callback) {
 ```
 
  - `template` - Compiled [Handlebars template](http://handlebarsjs.com/).
-```javascript
+   ```javascript
 var template = Handlebars.compile('{{blogs_count}} posts: <ul>{{#each resources.blogs}}<li>{{> blog}}</li>{{/each}}</ul>');
 ```
 
  - `template_options` - Object of [options to use](http://handlebarsjs.com/execution.html) when rendering the template: `data`, `helpers` and `partials`.
-```javascript
+   ```javascript
 var template_options = {
   helpers: {
     uppercase: function(string) {
