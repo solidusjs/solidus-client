@@ -13,61 +13,61 @@ Refer to the Solidus documentation to know more about those concepts.
 Rendering a template starts with the `render` function call, and ends with the `end` callback. The various options can be passed directly to the `render` method as a config object, or by chaining method calls on the returned object.
 
  - `resources` - Object of named urls. The urls can have dynamic segments, which will be replaced by the matching `params`.
-   ```javascript
-var resources = {
-  blogs: 'http://my-site.com/blogs?page={page}'
-};
-```
+  ```javascript
+  var resources = {
+    blogs: 'http://my-site.com/blogs?page={page}'
+  };
+  ```
 
  - `params` - Object of named values. The values will be interpolated into the dynamic resource urls.
-   ```javascript
-var params = {
-  page: 123
-};
-```
+  ```javascript
+  var params = {
+    page: 123
+  };
+  ```
 
  - `preprocessor` - Function that modifies the context. The preprocessor is run after the resources are fetched, but before the template is rendered.
-   ```javascript
-// Sync
-var preprocessor = function(context) {
-  context.blogs_count = context.resources.blogs.length;
-  return context;
-};
-```
+  ```javascript
+  // Sync
+  var preprocessor = function(context) {
+    context.blogs_count = context.resources.blogs.length;
+    return context;
+  };
+  ```
 
-   ```javascript
-// Async
-var preprocessor = function(context, callback) {
-  context.blogs_count = context.resources.blogs.length;
-  if (context.resources.blog.some_condition) {
-    solidus_client.getResource('http://www.my-site.com/something', null, function(err, data) {
-      context.more_data = data;
+  ```javascript
+  // Async
+  var preprocessor = function(context, callback) {
+    context.blogs_count = context.resources.blogs.length;
+    if (context.resources.blog.some_condition) {
+      solidus_client.getResource('http://www.my-site.com/something', null, function(err, data) {
+        context.more_data = data;
+        callback(context);
+      });
+    } else {
       callback(context);
-    });
-  } else {
-    callback(context);
-  }
-};
-```
+    }
+  };
+  ```
 
  - `template` - Compiled [Handlebars template](http://handlebarsjs.com/).
-   ```javascript
-var template = Handlebars.compile('{{blogs_count}} posts: <ul>{{#each resources.blogs}}<li>{{> blog}}</li>{{/each}}</ul>');
-```
+  ```javascript
+  var template = Handlebars.compile('{{blogs_count}} posts: <ul>{{#each resources.blogs}}<li>{{> blog}}</li>{{/each}}</ul>');
+  ```
 
  - `template_options` - Object of [options to use](http://handlebarsjs.com/execution.html) when rendering the template: `data`, `helpers` and `partials`.
-   ```javascript
-var template_options = {
-  helpers: {
-    uppercase: function(string) {
-      return string.toUpperCase();
+  ```javascript
+  var template_options = {
+    helpers: {
+      uppercase: function(string) {
+        return string.toUpperCase();
+      }
+    },
+    partials: {
+      blog: Handlebars.compile('{{uppercase name}}');
     }
-  },
-  partials: {
-    blog: Handlebars.compile('{{uppercase name}}');
-  }
-};
-```
+  };
+  ```
 
 ## Config Object Example
 
