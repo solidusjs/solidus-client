@@ -7,7 +7,15 @@ var Resource = require('../lib/resource.js');
 describe('Resource', function() {
   describe('.constructor', function() {
     it('initializes url_template, url and options', function(done) {
-      var resource = new Resource('http://solidus/{id}', {a: 1});
+      var resource = new Resource('http://solidus/{id}');
+      assert.equal(resource.url_template, 'http://solidus/{id}');
+      assert.equal(resource.url, 'http://solidus/{id}');
+      assert.deepEqual(resource.options, {});
+      done();
+    });
+
+    it('with object', function(done) {
+      var resource = new Resource({url: 'http://solidus/{id}', a: 1});
       assert.equal(resource.url_template, 'http://solidus/{id}');
       assert.equal(resource.url, 'http://solidus/{id}');
       assert.deepEqual(resource.options, {a: 1});
@@ -32,7 +40,7 @@ describe('Resource', function() {
     });
 
     it('finds the options by matching auths', function(done) {
-      var resource = new Resource('http://solidus.{a}/page');
+      var resource = new Resource({url: 'http://solidus.{a}/page', b: 2, e: 1});
       resource.buildUrlAndOptions({a: 'com'}, {
         'http://solidus.ca/page': {a: 1},
         'http://solidus.com/p.*': {b: 1},
@@ -40,7 +48,7 @@ describe('Resource', function() {
         'http://solidus.com/status': {d: 1}
       });
       assert.equal(resource.url, 'http://solidus.com/page');
-      assert.deepEqual(resource.options, {b: 1, c: 1});
+      assert.deepEqual(resource.options, {b: 2, c: 1, e: 1});
       done();
     });
   });
