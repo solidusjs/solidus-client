@@ -9,7 +9,7 @@ describe('SolidusClient', function() {
     it('returns the data value of the fetched resource', function(done) {
       nock('http://solidus.com').get('/?a=1').reply(200, '{"test": "success!"}');
 
-      var solidus_client = new SolidusClient({auth: {'.*': {query: {a: 1}}}});
+      var solidus_client = new SolidusClient({resources_options: {'.*': {query: {a: 1}}}});
       solidus_client.getResource('http://solidus.{a}', {a: 'com'}, function(err, res) {
         assert.ifError(err);
         assert.deepEqual(res, {test: 'success!'});

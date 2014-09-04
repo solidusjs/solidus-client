@@ -5,13 +5,11 @@ var Resource = require('./lib/resource.js');
 var View = require('./lib/view.js');
 
 var SolidusClient = function(options) {
-  options = options || {};
-  this.auth = options.auth;
+  this.resources_options = (options || {}).resources_options;
 };
 
-SolidusClient.prototype.getResource = function(url_template, params, callback) {
-  var resource = new Resource(url_template);
-  resource.buildUrlAndOptions(params, this.auth);
+SolidusClient.prototype.getResource = function(options, params, callback) {
+  var resource = new Resource(options, this.resources_options, params);
   resource.get(function(err, response) {
     callback(err, response ? response.data : null);
   });
@@ -25,8 +23,8 @@ SolidusClient.prototype.getResources = function(resources, params, callback) {
 
   if (!remaining) return callback(errors, result);
 
-  _.each(resources, function(url_template, name) {
-    self.getResource(url_template, params, function(err, data) {
+  _.each(resources, function(options, name) {
+    self.getResource(options, params, function(err, data) {
       if (err) {
         errors = errors || {};
         errors[name] = err;
