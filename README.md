@@ -12,12 +12,24 @@ Refer to the Solidus documentation to know more about those concepts.
 
 Rendering a template starts with the `render` function call, and ends with the `end` callback. The various options can be passed directly to the `render` method as a config object, or by chaining method calls on the returned object.
 
- - `resources` - Object of named urls. The urls can have dynamic segments, which will be replaced by the matching `params`.
+ - `resources` - Object of named urls or options. The urls can have dynamic segments, which will be replaced by the matching `params`.
   ```javascript
   var resources = {
-    blogs: 'http://my-site.com/blogs?page={page}'
+    blogs: 'http://my-site.com/blogs?page={page}',
+    news: {
+      url: 'http://news-site.com/news',
+      proxy: true
+    }
+  }
   };
   ```
+  Available options:
+   - `url` - Resource URL.
+   - `query` - Object of query values to add to the resource URL.
+   - `headers` - Object of HTTP headers to add to the resource request.
+   - `auth` - Object with `user` and `pass` values for HTTP Basic authentication.
+   - `with_credentials` - Whether to send cookies from the origin. Defaults to `false`.
+   - `proxy` - Whether to fetch the resource through Solidus, instead of directly hitting the resource URL. If `true`, all other options are ignored. Defaults to `false`.
 
  - `params` - Object of named values. The values will be interpolated into the dynamic resource urls.
   ```javascript
@@ -121,10 +133,10 @@ solidus_client.render(view)
 
 # Auth
 
-Just like in Solidus, resource security settings are [configured globally](https://github.com/solidusjs/solidus#global-resource-configuration). The `auth` property of the `SolidusClient` instance is scanned whenever a resource is fetched, to find matching auth settings. Example and available options:
+Just like in Solidus, resource security settings are [configured globally](https://github.com/solidusjs/solidus#global-resource-configuration). The `resources_options` property of the `SolidusClient` instance is scanned whenever a resource is fetched, to find matching options. See the Resources documentation above for the available options. Example:
 
 ```javascript
-var auth = {
+var resources_options = {
   "http://proxy.storyteller.io/*": {
     headers: {
       "Api-Key": "0000aaaa-aa00-00aa-a00a-aaaa000000"
@@ -137,16 +149,7 @@ var auth = {
   }
 };
 
-// Two ways to assign the auth
-var solidus_client = new SolidusClient({auth: auth});
-solidus_client.auth = auth;
+// Two ways to assign the resources options
+var solidus_client = new SolidusClient({resources_options: resources_options});
+solidus_client.resources_options = resources_options;
 ```
-
- - `query` - Object of query values to add to the resource URL.
- - `headers` - Object of HTTP headers to add to the resource request.
- - `auth` - Object with `user` and `pass` values for HTTP Basic authentication.
- - `with_credentials` - Whether to send cookies from the origin. Defaults to `false`.
-
-# TODO
-
- - Figure out how to specify which resources should be fetched through the server, and which ones should be fetched directly from the external API
