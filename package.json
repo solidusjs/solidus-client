@@ -16,6 +16,7 @@
     "url": "https://github.com/solidusjs/solidus-client.git"
   },
   "devDependencies": {
+    "handlebars": "~2.0.0",
     "nock": "~0.44.3"
   },
   "dependencies": {
