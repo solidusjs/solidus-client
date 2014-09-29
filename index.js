@@ -5,7 +5,11 @@ var Resource = require('./lib/resource.js');
 var View = require('./lib/view.js');
 
 var SolidusClient = function(options) {
-  this.resources_options = (options || {}).resources_options;
+  if (!(this instanceof SolidusClient)) return new SolidusClient(options);
+
+  options || (options = {});
+  this.resources_options = options.resources_options;
+  this.context           = options.context || {};
 };
 
 SolidusClient.prototype.getResource = function(options, params, callback) {
@@ -36,14 +40,22 @@ SolidusClient.prototype.getResources = function(resources, params, callback) {
   });
 };
 
+SolidusClient.prototype.addResourcesToContext = function(resources) {
+  this.context.resources || (this.context.resources = {});
+  for (var name in resources) {
+    this.context.resources[name] = resources[name];
+  }
+};
+
 SolidusClient.prototype.renderTemplate = function(template, context, template_options, callback) {
   template_options = template_options || {};
   template_options.helpers = _.extend(handlebars_helper.helpers, template_options.helpers || {});
   return template(context, template_options);
 };
 
-SolidusClient.prototype.render = function(view) {
-  return new View(this, view);
+SolidusClient.prototype.render = function(view, callback) {
+  var renderer = new View(this, view);
+  return callback ? renderer.end(callback) : renderer;
 };
 
 module.exports = SolidusClient;
