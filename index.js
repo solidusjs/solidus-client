@@ -53,6 +53,18 @@ SolidusClient.prototype.renderTemplate = function(template, context, template_op
   return template(context, template_options);
 };
 
+SolidusClient.prototype.view = function(view) {
+  var self = this;
+
+  view.render = function() {
+    var args = Array.prototype.slice.call(arguments);
+    args.unshift(this);
+    return self.render.apply(self, args);
+  };
+
+  return view;
+};
+
 SolidusClient.prototype.render = function(view, callback) {
   var renderer = new View(this, view);
   return callback ? renderer.end(callback) : renderer;
