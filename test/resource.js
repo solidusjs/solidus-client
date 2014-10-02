@@ -74,10 +74,11 @@ describe('Resource', function() {
     it('with connection error', function(done) {
       // Unfortunately nock doesn't simulate connection errors...
       // https://github.com/pgte/nock/issues/97
+      nock.disableNetConnect();
       var resource = new Resource('http://jiofdjgoifdjoigfd.com');
       resource.get(function(err, res) {
         assert(err);
-        assert(!res);
+        assert(!res.data);
         done();
       });
     });
@@ -186,6 +187,36 @@ describe('Resource', function() {
           assert.deepEqual(res.data, {test: 'success!'});
           done();
         });
+      });
+    });
+
+    describe('with jsonp', function() {
+      var isNode = Resource.isNode;
+      var resource = new Resource({url: 'http://solidus.com', jsonp: true});
+
+      afterEach(function() {
+        Resource.isNode = isNode;
+      });
+
+      it('from server', function(done) {
+        Resource.isNode = true;
+        nock('http://solidus.com').get('/').reply(200, '{"test": "success!"}');
+        resource.get(function(err, res) {
+          assert.ifError(err);
+          assert.deepEqual(res.data, {test: 'success!'});
+          done();
+        });
+      });
+
+      it('from client', function(done) {
+        // Mocking a jsonp request here is hard, but we can at least test the code path :(
+        Resource.isNode = false;
+        try {
+          resource.get();
+        } catch (err) {
+          assert.equal(err.message, 'document is not defined');
+          done();
+        }
       });
     });
   });

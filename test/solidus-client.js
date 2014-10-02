@@ -2,7 +2,8 @@ var assert = require('assert');
 var Handlebars = require('handlebars');
 var nock = require('nock');
 
-var SolidusClient = require('../index.js');
+var SolidusClient = require('../index');
+var View = require('../lib/view');
 
 describe('SolidusClient', function() {
   describe('.getResource', function() {
@@ -39,6 +40,8 @@ describe('SolidusClient', function() {
   });
 
   describe('.getResources', function() {
+    var solidus_client = new SolidusClient();
+
     it('calls getResource for each resource', function(done) {
       nock('http://solidus').get('/1').reply(200, '{"test": "success!"}');
       nock('http://solidus').get('/2').reply(200, 'not JSON');
@@ -51,7 +54,6 @@ describe('SolidusClient', function() {
         fourth: 'not a url',
       };
 
-      var solidus_client = new SolidusClient();
       solidus_client.getResources(resources, null, function(err, res) {
         assert.deepEqual(err, {second: 'Invalid JSON: Unexpected token o'});
         assert.deepEqual(res, {first: {test: 'success!'}, third: {test: 'success!'}, fourth: undefined});
@@ -60,7 +62,6 @@ describe('SolidusClient', function() {
     });
 
     it('with no resources', function(done) {
-      var solidus_client = new SolidusClient();
       solidus_client.getResources({}, null, function(err, res) {
         assert.ifError(err);
         assert.deepEqual(res, {});
@@ -93,6 +94,41 @@ describe('SolidusClient', function() {
       var html = solidus_client.renderTemplate(template, context, template_options);
       assert.equal(html, '1 2 C e f');
       done();
+    });
+  });
+
+  describe('.view', function() {
+    it('adds a .render method to the view', function(done) {
+      var view = {
+        template: Handlebars.compile('test')
+      };
+      var solidus_client = new SolidusClient();
+      view = solidus_client.view(view);
+      view.render(function(html) {
+        assert.equal(html, 'test');
+        done();
+      });
+    });
+  });
+
+  describe('.render', function() {
+    var view = {
+      template: Handlebars.compile('test')
+    };
+    var solidus_client = new SolidusClient();
+
+    it('without a callback returns a View', function(done) {
+      var object = solidus_client.render(view);
+      assert(object instanceof View);
+      assert.equal(object.template, view.template);
+      done();
+    });
+
+    it('with callback renders the view', function(done) {
+      solidus_client.render(view, function(html) {
+        assert.equal(html, 'test');
+        done();
+      });
     });
   });
 });

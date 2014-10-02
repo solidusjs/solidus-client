@@ -40,13 +40,6 @@ SolidusClient.prototype.getResources = function(resources, params, callback) {
   });
 };
 
-SolidusClient.prototype.addResourcesToContext = function(resources) {
-  this.context.resources || (this.context.resources = {});
-  for (var name in resources) {
-    this.context.resources[name] = resources[name];
-  }
-};
-
 SolidusClient.prototype.renderTemplate = function(template, context, template_options, callback) {
   template_options = template_options || {};
   template_options.helpers = _.extend(handlebars_helper.helpers, template_options.helpers || {});

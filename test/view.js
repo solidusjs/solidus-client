@@ -34,6 +34,7 @@ describe('View', function() {
         .render(view)
         .end(function(html) {
           assert.equal(html, 'success! helped');
+          assert.deepEqual(solidus_client.context, {resources:{test:{test:'success!'}},test:'success!'});
           done();
         });
     });
@@ -44,6 +45,7 @@ describe('View', function() {
         .render({template: Handlebars.compile('works! {{resources.test}}')})
         .end(function(html) {
           assert.equal(html, 'works! ');
+          assert.deepEqual(solidus_client.context, {resources:{}});
           done();
         });
     });
@@ -60,6 +62,7 @@ describe('View', function() {
         .then(preprocessor)
         .end(function(html) {
           assert.equal(html, 'success! helped');
+          assert.deepEqual(solidus_client.context, {resources:{test:{test:'success!'}},test:'success!'});
           done();
         });
     });
@@ -70,6 +73,7 @@ describe('View', function() {
         .render(Handlebars.compile('works! {{resources.test}}'))
         .end(function(html) {
           assert.equal(html, 'works! ');
+          assert.deepEqual(solidus_client.context, {resources:{}});
           done();
         });
     });
@@ -88,6 +92,7 @@ describe('View', function() {
       })
       .end(function(html) {
         assert.equal(html, 'works! success!');
+        assert.deepEqual(solidus_client.context, {resources:{},test:'success!'});
         done();
       });
   });
