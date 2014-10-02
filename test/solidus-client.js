@@ -113,21 +113,46 @@ describe('SolidusClient', function() {
 
   describe('.render', function() {
     var view = {
-      template: Handlebars.compile('test')
+      resources: {test: 'http://solidus.{a}'},
+      template: Handlebars.compile('{{resources.test.test}}')
     };
     var solidus_client = new SolidusClient();
 
-    it('without a callback returns a View', function(done) {
-      var object = solidus_client.render(view);
-      assert(object instanceof View);
-      assert.equal(object.template, view.template);
-      done();
+    describe('without a callback', function() {
+      it('returns a View', function(done) {
+        var object = solidus_client.render(view);
+        assert(object instanceof View);
+        assert.equal(object.template, view.template);
+        assert.deepEqual(object.resources, view.resources);
+        assert.deepEqual(object.resources_params, {});
+        done();
+      });
+
+      it('with params', function(done) {
+        var object = solidus_client.render(view, {a: 'com'});
+        assert(object instanceof View);
+        assert.equal(object.template, view.template);
+        assert.deepEqual(object.resources, view.resources);
+        assert.deepEqual(object.resources_params, {a: 'com'});
+        done();
+      });
     });
 
-    it('with callback renders the view', function(done) {
-      solidus_client.render(view, function(html) {
-        assert.equal(html, 'test');
-        done();
+    describe('with a callback', function() {
+      it('renders the view', function(done) {
+        nock('http://solidus.').get('/').reply(200, '{"test": "success!"}');
+        solidus_client.render(view, function(html) {
+          assert.equal(html, 'success!');
+          done();
+        });
+      });
+
+      it('with params', function(done) {
+        nock('http://solidus.com').get('/').reply(200, '{"test": "success!"}');
+        solidus_client.render(view, {a: 'com'}, function(html) {
+          assert.equal(html, 'success!');
+          done();
+        });
       });
     });
   });
