@@ -5,12 +5,17 @@ var zlib = require('zlib');
 var Resource = require('../lib/resource.js');
 
 describe('Resource', function() {
+  var isNode = Resource.isNode;
+  var isIE   = Resource.isIE;
+
   beforeEach(function() {
     nock.disableNetConnect();
   });
 
   afterEach(function() {
     nock.enableNetConnect();
+    Resource.isNode = isNode;
+    Resource.isIE   = isIE;
   });
 
   describe('.constructor', function() {
@@ -59,14 +64,6 @@ describe('Resource', function() {
   });
 
   describe('.get', function() {
-    var isNode = Resource.isNode;
-    var isIE   = Resource.isIE;
-
-    afterEach(function() {
-      Resource.isNode = isNode;
-      Resource.isIE   = isIE;
-    });
-
     it('fetches the resource and returns the body as an object', function(done) {
       var resource = new Resource('http://solidus.com');
       nock('http://solidus.com').get('/').reply(200, '{"test": "success!"}');
@@ -191,12 +188,6 @@ describe('Resource', function() {
     });
 
     describe('with proxy', function() {
-      var isNode = Resource.isNode;
-
-      afterEach(function() {
-        Resource.isNode = isNode;
-      });
-
       it('with Node', function(done) {
         Resource.isNode = true;
         var resource = new Resource({url: 'http://solidus.com', proxy: true});
@@ -232,14 +223,7 @@ describe('Resource', function() {
     });
 
     describe('with jsonp', function() {
-      var isNode   = Resource.isNode;
-      var isIE     = Resource.isIE;
       var resource = new Resource({url: 'http://solidus.com', jsonp: true});
-
-      afterEach(function() {
-        Resource.isNode = isNode;
-        Resource.isIE   = isIE;
-      });
 
       it('with Node', function(done) {
         Resource.isNode = true;
@@ -262,6 +246,41 @@ describe('Resource', function() {
           assert.equal(err.message, 'document is not defined');
           done();
         }
+      });
+    });
+  });
+
+  describe('.post', function() {
+    it('posts to the resource', function(done) {
+      var body   = {id: 1, email: 'test@sparkart.com'};
+      var result = {status: 'ok', customer: body};
+      nock('http://solidus.com').post('/', body).reply(200, JSON.stringify(result));
+
+      var resource = new Resource('http://solidus.com');
+      resource.post(body, function(err, res) {
+        assert.ifError(err);
+        assert.deepEqual(res.data, result);
+        done();
+      });
+    });
+
+    it('is not supported with proxy', function(done) {
+      Resource.isNode = false;
+      var resource = new Resource({url: 'http://solidus.com', proxy: true});
+      resource.post(null, function(err, res) {
+        assert.equal(err, 'Invalid proxy method: post');
+        assert(!res.data);
+        done();
+      });
+    });
+
+    it('is not supported with jsonp', function(done) {
+      Resource.isNode = false;
+      var resource = new Resource({url: 'http://solidus.com', jsonp: true});
+      resource.post(null, function(err, res) {
+        assert.equal(err, 'Invalid JSONP method: post');
+        assert(!res.data);
+        done();
       });
     });
   });
