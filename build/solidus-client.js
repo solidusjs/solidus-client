@@ -104,7 +104,8 @@ Resource.prototype.get = function(callback) {
 };
 
 // Made public for easy testing
-Resource.isNode = !(typeof window !== "undefined" && window !== null);
+Resource.isNode = !(typeof window !== 'undefined' && window !== null);
+Resource.isIE   = typeof XDomainRequest !== 'undefined';
 
 // PRIVATE
 
@@ -144,28 +145,36 @@ var expandVariables = function(string, params) {
 };
 
 var request = function(callback) {
-  var request_type;
-  if (this.options.proxy && !Resource.isNode) {
-    request_type = proxyRequest;
-  } else if (this.options.jsonp && !Resource.isNode) {
-    request_type = jsonpRequest;
-  } else {
-    request_type = clientRequest;
+  var proxy, jsonp;
+  if (!Resource.isNode) {
+    proxy = this.options.proxy;
+    jsonp = this.options.jsonp || (this.options.with_credentials && Resource.isIE);
   }
-  request_type.call(this, callback);
+
+  if (proxy) {
+    proxyRequest.call(this, callback);;
+  } else if (jsonp) {
+    jsonpRequest.call(this, callback);;
+  } else {
+    clientRequest.call(this, callback);;
+  }
 };
 
 var proxyRequest = function(callback) {
   var solidus_api_route = this.options.solidus_api_route || DEFAULT_SOLIDUS_API_ROUTE;
-  var request = superagent.get(solidus_api_route + 'resource.json?');
+  var request = superagent.get(solidus_api_route + 'resource.json');
   request.query({url: this.url});
   superAgentRequest(request, callback);
 };
 
 var jsonpRequest = function(callback) {
   var callbackName = 'solidus_client_jsonp_callback_' + Math.round(100000 * Math.random());
+  var query = 'callback=' + callbackName;
+  _.each(this.options.query, function(value, name) {
+    query += '&' + name + '=' + value;
+  });
   var script = document.createElement('script');
-  script.src = this.url + (this.url.indexOf('?') >= 0 ? '&' : '?') + 'callback=' + callbackName;
+  script.src = this.url + (this.url.indexOf('?') >= 0 ? '&' : '?') + query;
 
   window[callbackName] = function(data) {
     delete window[callbackName];

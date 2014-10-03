@@ -59,6 +59,14 @@ describe('Resource', function() {
   });
 
   describe('.get', function() {
+    var isNode = Resource.isNode;
+    var isIE   = Resource.isIE;
+
+    afterEach(function() {
+      Resource.isNode = isNode;
+      Resource.isIE   = isIE;
+    });
+
     it('fetches the resource and returns the body as an object', function(done) {
       var resource = new Resource('http://solidus.com');
       nock('http://solidus.com').get('/').reply(200, '{"test": "success!"}');
@@ -82,7 +90,6 @@ describe('Resource', function() {
     it('with connection error', function(done) {
       // Unfortunately nock doesn't simulate connection errors...
       // https://github.com/pgte/nock/issues/97
-      nock.disableNetConnect();
       var resource = new Resource('http://jiofdjgoifdjoigfd.com');
       resource.get(function(err, res) {
         assert(err);
@@ -144,6 +151,21 @@ describe('Resource', function() {
       });
     });
 
+    it('with credentials and IE', function(done) {
+      // Mocking a jsonp request here is hard, but we can at least test the code path :(
+      Resource.isNode = false;
+      Resource.isIE   = true;
+      var resource = new Resource('http://solidus.com');
+      resource.options = {with_credentials: true};
+      try {
+        resource.get();
+        assert(false);
+      } catch (err) {
+        assert.equal(err.message, 'document is not defined');
+        done();
+      }
+    });
+
     it('with a gziped response', function(done) {
       zlib.gzip('{"test": "success!"}', function(err, response) {
         var resource = new Resource('http://solidus.com');
@@ -175,7 +197,7 @@ describe('Resource', function() {
         Resource.isNode = isNode;
       });
 
-      it('from server', function(done) {
+      it('with Node', function(done) {
         Resource.isNode = true;
         var resource = new Resource({url: 'http://solidus.com', proxy: true});
         nock('http://solidus.com').get('/').reply(200, '{"test": "success!"}');
@@ -186,7 +208,7 @@ describe('Resource', function() {
         });
       });
 
-      it('from client', function(done) {
+      it('with browser', function(done) {
         Resource.isNode = false;
         var resource = new Resource({url: 'http://solidus.com', proxy: true});
         nock('http://localhost').get('/api/resource.json?url=http%3A%2F%2Fsolidus.com').reply(200, '{"test": "success!"}');
@@ -210,14 +232,16 @@ describe('Resource', function() {
     });
 
     describe('with jsonp', function() {
-      var isNode = Resource.isNode;
+      var isNode   = Resource.isNode;
+      var isIE     = Resource.isIE;
       var resource = new Resource({url: 'http://solidus.com', jsonp: true});
 
       afterEach(function() {
         Resource.isNode = isNode;
+        Resource.isIE   = isIE;
       });
 
-      it('from server', function(done) {
+      it('with Node', function(done) {
         Resource.isNode = true;
         nock('http://solidus.com').get('/').reply(200, '{"test": "success!"}');
         resource.get(function(err, res) {
@@ -227,11 +251,13 @@ describe('Resource', function() {
         });
       });
 
-      it('from client', function(done) {
+      it('with browser', function(done) {
         // Mocking a jsonp request here is hard, but we can at least test the code path :(
         Resource.isNode = false;
+        Resource.isIE   = false;
         try {
           resource.get();
+          assert(false);
         } catch (err) {
           assert.equal(err.message, 'document is not defined');
           done();
