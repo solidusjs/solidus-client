@@ -16,7 +16,12 @@ describe('View', function() {
   var params = {a: 'com'}
 
   beforeEach(function() {
+    nock.disableNetConnect();
     nock('http://solidus.com').get('/').reply(200, '{"test": "success!"}');
+  });
+
+  afterEach(function() {
+    nock.enableNetConnect();
   });
 
   describe('with view object', function() {

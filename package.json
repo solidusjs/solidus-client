@@ -17,7 +17,12 @@
   },
   "devDependencies": {
     "handlebars": "~2.0.0",
-    "nock": "~0.44.3"
+    "nock": "~0.44.3",
+    "gulp": "~3.8.8",
+    "gulp-browserify": "~0.5.0",
+    "gulp-rename": "~1.2.0",
+    "gulp-derequire": "~2.0.0",
+    "gulp-mocha": "~1.1.0"
   },
   "dependencies": {
     "handlebars-helper": ">=0.0.12",

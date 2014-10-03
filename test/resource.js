@@ -5,6 +5,14 @@ var zlib = require('zlib');
 var Resource = require('../lib/resource.js');
 
 describe('Resource', function() {
+  beforeEach(function() {
+    nock.disableNetConnect();
+  });
+
+  afterEach(function() {
+    nock.enableNetConnect();
+  });
+
   describe('.constructor', function() {
     it('initializes url and options', function(done) {
       var resource = new Resource('http://solidus.com/page');
@@ -96,6 +104,17 @@ describe('Resource', function() {
       var resource = new Resource('http://solidus.com/page?a=1&b=2');
       resource.options = {query: {b: '3', c: '4'}};
       nock('http://solidus.com').get('/page?b=2&c=4&a=1').reply(200, '{"test": "success!"}');
+      resource.get(function(err, res) {
+        assert.ifError(err);
+        assert.deepEqual(res.data, {test: 'success!'});
+        done();
+      });
+    });
+
+    it('does not encode query strings', function(done) {
+      var resource = new Resource('http://solidus.com/page?a=,&b=%2C');
+      resource.options = {query: {c: ',', d: '%2C'}};
+      nock('http://solidus.com').get('/page?c=,&d=%2C&a=,&b=%2C').reply(200, '{"test": "success!"}');
       resource.get(function(err, res) {
         assert.ifError(err);
         assert.deepEqual(res.data, {test: 'success!'});

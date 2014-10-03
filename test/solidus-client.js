@@ -6,6 +6,14 @@ var SolidusClient = require('../index');
 var View = require('../lib/view');
 
 describe('SolidusClient', function() {
+  beforeEach(function() {
+    nock.disableNetConnect();
+  });
+
+  afterEach(function() {
+    nock.enableNetConnect();
+  });
+
   describe('.getResource', function() {
     it('returns the data value of the fetched resource', function(done) {
       nock('http://solidus.com').get('/?a=1').reply(200, '{"test": "success!"}');
