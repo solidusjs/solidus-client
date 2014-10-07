@@ -92,15 +92,11 @@ var Resource = function(options, resources_options, params) {
 };
 
 Resource.prototype.get = function(callback) {
-  if (!this.url) return callback(null, {});
-  var result = {request_time: new Date().getTime()};
+  request.call(this, 'get', null, callback);
+};
 
-  request.call(this, function(err, res, data) {
-    result.response_time = new Date().getTime();
-    result.response = res;
-    result.data = data;
-    callback(err, result);
-  });
+Resource.prototype.post = function(data, callback) {
+  request.call(this, 'post', data, callback);
 };
 
 // Made public for easy testing
@@ -144,30 +140,42 @@ var expandVariables = function(string, params) {
   });
 };
 
-var request = function(callback) {
+var request = function(method, data, callback) {
+  if (!this.url) return callback(null, {});
+
+  var request_type = requestType.call(this);
+  var result = {request_time: new Date().getTime()};
+  request_type.call(this, method, data, function(err, res, data) {
+    result.response_time = new Date().getTime();
+    result.response = res;
+    result.data = data;
+    callback(err, result);
+  });
+};
+
+var requestType = function() {
   var proxy, jsonp;
   if (!Resource.isNode) {
     proxy = this.options.proxy;
     jsonp = this.options.jsonp || (this.options.with_credentials && Resource.isIE);
   }
-
-  if (proxy) {
-    proxyRequest.call(this, callback);;
-  } else if (jsonp) {
-    jsonpRequest.call(this, callback);;
-  } else {
-    clientRequest.call(this, callback);;
-  }
+  if (proxy) return proxyRequest;
+  else if (jsonp) return jsonpRequest;
+  else return clientRequest;
 };
 
-var proxyRequest = function(callback) {
+var proxyRequest = function(method, data, callback) {
+  if (method != 'get') return callback('Invalid proxy method: ' + method);
+
   var solidus_api_route = this.options.solidus_api_route || DEFAULT_SOLIDUS_API_ROUTE;
   var request = superagent.get(solidus_api_route + 'resource.json');
   request.query({url: this.url});
   superAgentRequest(request, callback);
 };
 
-var jsonpRequest = function(callback) {
+var jsonpRequest = function(method, data, callback) {
+  if (method != 'get') return callback('Invalid JSONP method: ' + method);
+
   var callbackName = 'solidus_client_jsonp_callback_' + Math.round(100000 * Math.random());
   var query = 'callback=' + callbackName;
   _.each(this.options.query, function(value, name) {
@@ -185,8 +193,12 @@ var jsonpRequest = function(callback) {
   document.body.appendChild(script);
 };
 
-var clientRequest = function(callback) {
-  var request = superagent.get(this.url);
+var clientRequest = function(method, data, callback) {
+  var request;
+  if (method == 'get') request = superagent.get(this.url);
+  else if (method == 'post') request = superagent.post(this.url).send(data);
+  else return callback('Invalid method: ' + method);
+
   if (this.options.query) request.query(this.options.query);
   if (this.options.headers) request.set(this.options.headers);
   if (this.options.auth) request.auth(this.options.auth.user, this.options.auth.pass);
@@ -3659,7 +3671,7 @@ Response.prototype.setHeaderProperties = function(header){
 
 Response.prototype.parseBody = function(str){
   var parse = request.parse[this.type];
-  return parse
+  return parse && str && str.length
     ? parse(str)
     : null;
 };
@@ -3755,9 +3767,16 @@ function Request(method, url) {
   this.header = {};
   this._header = {};
   this.on('end', function(){
-    var res = new Response(self);
-    if ('HEAD' == method) res.text = null;
-    self.callback(null, res);
+    try {
+      var res = new Response(self);
+      if ('HEAD' == method) res.text = null;
+      self.callback(null, res);
+    } catch(e) {
+      var err = new Error('Parser is unable to parse the response');
+      err.parse = true;
+      err.original = e;
+      self.callback(err);
+    }
   });
 }
 
@@ -3847,6 +3866,26 @@ Request.prototype.set = function(field, val){
   }
   this._header[field.toLowerCase()] = val;
   this.header[field] = val;
+  return this;
+};
+
+/**
+ * Remove header `field`.
+ *
+ * Example:
+ *
+ *      req.get('/')
+ *        .unset('User-Agent')
+ *        .end(callback);
+ *
+ * @param {String} field
+ * @return {Request} for chaining
+ * @api public
+ */
+
+Request.prototype.unset = function(field){
+  delete this._header[field.toLowerCase()];
+  delete this.header[field];
   return this;
 };
 
@@ -4159,13 +4198,16 @@ Request.prototype.end = function(fn){
     self.emit('end');
   };
 
+  // TODO: Fix this!!
+  // https://github.com/visionmedia/superagent/issues/442
+  // https://bugzilla.mozilla.org/show_bug.cgi?id=727412
   // progress
-  if (xhr.upload) {
-    xhr.upload.onprogress = function(e){
-      e.percent = e.loaded / e.total * 100;
-      self.emit('progress', e);
-    };
-  }
+  // if (xhr.upload) {
+  //   xhr.upload.onprogress = function(e){
+  //     e.percent = e.loaded / e.total * 100;
+  //     self.emit('progress', e);
+  //   };
+  // }
 
   // timeout
   if (timeout && !this._timer) {
