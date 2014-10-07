@@ -63,6 +63,67 @@ describe('Resource', function() {
     });
   });
 
+  describe('.requestType', function() {
+    it('with Node', function(done) {
+      var resource;
+      Resource.isNode = true;
+
+      resource = new Resource({url: 'http://solidus.com'});
+      assert.equal(resource.requestType(), 'client');
+
+      resource = new Resource({url: 'http://solidus.com', proxy: true});
+      assert.equal(resource.requestType(), 'client');
+
+      resource = new Resource({url: 'http://solidus.com', jsonp: true});
+      assert.equal(resource.requestType(), 'client');
+
+      resource = new Resource({url: 'http://solidus.com', with_credentials: true});
+      assert.equal(resource.requestType(), 'client');
+
+      done();
+    });
+
+    it('with browser', function(done) {
+      var resource;
+      Resource.isNode = false;
+      Resource.isIE   = false;
+
+      resource = new Resource({url: 'http://solidus.com'});
+      assert.equal(resource.requestType(), 'client');
+
+      resource = new Resource({url: 'http://solidus.com', proxy: true});
+      assert.equal(resource.requestType(), 'proxy');
+
+      resource = new Resource({url: 'http://solidus.com', jsonp: true});
+      assert.equal(resource.requestType(), 'jsonp');
+
+      resource = new Resource({url: 'http://solidus.com', with_credentials: true});
+      assert.equal(resource.requestType(), 'client');
+
+      done();
+    });
+
+    it('with IE', function(done) {
+      var resource;
+      Resource.isNode = false;
+      Resource.isIE   = true;
+
+      resource = new Resource({url: 'http://solidus.com'});
+      assert.equal(resource.requestType(), 'client');
+
+      resource = new Resource({url: 'http://solidus.com', proxy: true});
+      assert.equal(resource.requestType(), 'proxy');
+
+      resource = new Resource({url: 'http://solidus.com', jsonp: true});
+      assert.equal(resource.requestType(), 'jsonp');
+
+      resource = new Resource({url: 'http://solidus.com', with_credentials: true});
+      assert.equal(resource.requestType(), 'jsonp');
+
+      done();
+    });
+  });
+
   describe('.get', function() {
     it('fetches the resource and returns the body as an object', function(done) {
       var resource = new Resource('http://solidus.com');
