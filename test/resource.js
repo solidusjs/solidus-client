@@ -274,14 +274,18 @@ describe('Resource', function() {
       });
     });
 
-    it('is not supported with jsonp', function(done) {
+    it('with jsonp', function(done) {
+      // Mocking a jsonp request here is hard, but we can at least test the code path :(
       Resource.isNode = false;
+      Resource.isIE   = false;
       var resource = new Resource({url: 'http://solidus.com', jsonp: true});
-      resource.post(null, function(err, res) {
-        assert.equal(err, 'Invalid JSONP method: post');
-        assert(!res.data);
+      try {
+        resource.post();
+        assert(false);
+      } catch (err) {
+        assert.equal(err.message, 'document is not defined');
         done();
-      });
+      }
     });
   });
 });
