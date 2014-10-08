@@ -1,28 +1,21 @@
 var assert = require('assert');
 var Handlebars = require('handlebars');
-var nock = require('nock');
 
-var SolidusClient = require('../index.js');
+var SolidusClient = require('../../index');
+var host = require('../config').host;
+
+module.exports = function() {
 
 describe('View', function() {
   var solidus_client = new SolidusClient();
-  var resources = {test: 'http://solidus.{a}'};
+  var resources = {test: host + '/page?a={a}'};
   var preprocessor = function(context) {
-    context.test = context.resources.test.test;
+    context.test = context.resources.test.url;
     return context;
   };
   var template = Handlebars.compile('{{test}} {{custom}}');
   var template_options = {helpers: {custom: function() {return 'helped';}}};
-  var params = {a: 'com'}
-
-  beforeEach(function() {
-    nock.disableNetConnect();
-    nock('http://solidus.com').get('/').reply(200, '{"test": "success!"}');
-  });
-
-  afterEach(function() {
-    nock.enableNetConnect();
-  });
+  var params = {a: 1}
 
   describe('with view object', function() {
     it('with all options', function(done) {
@@ -38,8 +31,8 @@ describe('View', function() {
       solidus_client
         .render(view)
         .end(function(html) {
-          assert.equal(html, 'success! helped');
-          assert.deepEqual(solidus_client.context, {resources:{test:{test:'success!'}},test:'success!'});
+          assert.equal(html, '/page?a=1 helped');
+          assert.deepEqual(solidus_client.context, {resources:{test:{url:'/page?a=1'}},test:'/page?a=1'});
           done();
         });
     });
@@ -66,8 +59,8 @@ describe('View', function() {
         .get(resources)
         .then(preprocessor)
         .end(function(html) {
-          assert.equal(html, 'success! helped');
-          assert.deepEqual(solidus_client.context, {resources:{test:{test:'success!'}},test:'success!'});
+          assert.equal(html, '/page?a=1 helped');
+          assert.deepEqual(solidus_client.context, {resources:{test:{url:'/page?a=1'}},test:'/page?a=1'});
           done();
         });
     });
@@ -91,14 +84,16 @@ describe('View', function() {
       .then(function(context, callback) {
         solidus_client.getResources(resources, params, function(err, resources) {
           assert.ifError(err);
-          context.test = resources.test.test;
+          context.test = resources.test.url;
           callback(context);
         });
       })
       .end(function(html) {
-        assert.equal(html, 'works! success!');
-        assert.deepEqual(solidus_client.context, {resources:{},test:'success!'});
+        assert.equal(html, 'works! /page?a=1');
+        assert.deepEqual(solidus_client.context, {resources:{},test:'/page?a=1'});
         done();
       });
   });
 });
+
+};

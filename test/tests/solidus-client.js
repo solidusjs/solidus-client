@@ -1,36 +1,26 @@
 var assert = require('assert');
 var Handlebars = require('handlebars');
-var nock = require('nock');
 
-var SolidusClient = require('../index');
-var View = require('../lib/view');
+var SolidusClient = require('../../index');
+var View = require('../../lib/view');
+var host = require('../config').host;
+
+module.exports = function() {
 
 describe('SolidusClient', function() {
-  beforeEach(function() {
-    nock.disableNetConnect();
-  });
-
-  afterEach(function() {
-    nock.enableNetConnect();
-  });
-
   describe('.getResource', function() {
     it('returns the data value of the fetched resource', function(done) {
-      nock('http://solidus.com').get('/?a=1').reply(200, '{"test": "success!"}');
-
       var solidus_client = new SolidusClient({resources_options: {'.*': {query: {a: 1}}}});
-      solidus_client.getResource('http://solidus.{a}', {a: 'com'}, function(err, res) {
+      solidus_client.getResource(host + '/{a}', {a: 'page'}, function(err, res) {
         assert.ifError(err);
-        assert.deepEqual(res, {test: 'success!'});
+        assert.deepEqual(res, {url: '/page?a=1'});
         done();
       });
     });
 
     it('with a bad resource', function(done) {
-      nock('http://solidus').get('/').reply(200, 'not JSON');
-
       var solidus_client = new SolidusClient();
-      solidus_client.getResource('http://solidus', null, function(err, res) {
+      solidus_client.getResource(host + '/not-json', null, function(err, res) {
         assert.equal(err, 'Invalid JSON: Unexpected token o');
         assert(!res);
         done();
@@ -51,20 +41,22 @@ describe('SolidusClient', function() {
     var solidus_client = new SolidusClient();
 
     it('calls getResource for each resource', function(done) {
-      nock('http://solidus').get('/1').reply(200, '{"test": "success!"}');
-      nock('http://solidus').get('/2').reply(200, 'not JSON');
-      nock('http://solidus').get('/3').reply(200, '{"test": "success!"}');
-
       var resources = {
-        first: 'http://solidus/1',
-        second: 'http://solidus/2',
-        third: 'http://solidus/3',
+        first:  host + '/page',
+        second: host + '/not-json',
+        third:  host + '/page?a=1',
         fourth: 'not a url',
       };
 
       solidus_client.getResources(resources, null, function(err, res) {
-        assert.deepEqual(err, {second: 'Invalid JSON: Unexpected token o'});
-        assert.deepEqual(res, {first: {test: 'success!'}, third: {test: 'success!'}, fourth: undefined});
+        assert.deepEqual(err, {
+          second: 'Invalid JSON: Unexpected token o'
+        });
+        assert.deepEqual(res, {
+          first:  {url: '/page'},
+          third:  {url: '/page?a=1'},
+          fourth: undefined
+        });
         done();
       });
     });
@@ -121,8 +113,8 @@ describe('SolidusClient', function() {
 
   describe('.render', function() {
     var view = {
-      resources: {test: 'http://solidus.{a}'},
-      template: Handlebars.compile('{{resources.test.test}}')
+      resources: {test: host + '/page?a={a}'},
+      template: Handlebars.compile('{{resources.test.url}}')
     };
     var solidus_client = new SolidusClient();
 
@@ -148,20 +140,20 @@ describe('SolidusClient', function() {
 
     describe('with a callback', function() {
       it('renders the view', function(done) {
-        nock('http://solidus.').get('/').reply(200, '{"test": "success!"}');
         solidus_client.render(view, function(html) {
-          assert.equal(html, 'success!');
+          assert.equal(html, '/page?a=');
           done();
         });
       });
 
       it('with params', function(done) {
-        nock('http://solidus.com').get('/').reply(200, '{"test": "success!"}');
-        solidus_client.render(view, {a: 'com'}, function(html) {
-          assert.equal(html, 'success!');
+        solidus_client.render(view, {a: 1}, function(html) {
+          assert.equal(html, '/page?a=1');
           done();
         });
       });
     });
   });
 });
+
+};

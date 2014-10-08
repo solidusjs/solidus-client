@@ -16,7 +16,9 @@
     "url": "https://github.com/solidusjs/solidus-client.git"
   },
   "scripts": {
-    "build": "./node_modules/.bin/gulp build"
+    "build": "./node_modules/.bin/gulp build",
+    "test": "./node_modules/.bin/gulp test",
+    "test-browser": "./node_modules/.bin/gulp test-browser"
   },
   "devDependencies": {
     "handlebars": "~2.0.0",
@@ -25,7 +27,9 @@
     "gulp-browserify": "~0.5.0",
     "gulp-rename": "~1.2.0",
     "gulp-derequire": "~2.0.0",
-    "gulp-mocha": "~1.1.0"
+    "gulp-mocha": "~1.1.0",
+    "run-sequence": "~1.0.1",
+    "gulp-util": "~3.0.1"
   },
   "dependencies": {
     "handlebars-helper": ">=0.0.12",

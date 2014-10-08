@@ -153,3 +153,18 @@ var resources_options = {
 var solidus_client = new SolidusClient({resources_options: resources_options});
 solidus_client.resources_options = resources_options;
 ```
+
+# Testing
+
+To run the server-side tests:
+
+```
+$ npm run test
+```
+
+To run the client-side tests:
+
+```
+$ npm run test-browser
+// Then hit http://localhost:8081/test/browser/test.html in your browser
+```

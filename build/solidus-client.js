@@ -92,6 +92,14 @@ var Resource = function(options, resources_options, params) {
   }
 };
 
+Resource.prototype.requestType = function() {
+  if (!Resource.isNode) {
+    if (this.options.proxy) return 'proxy';
+    if (this.options.jsonp || (this.options.with_credentials && Resource.isIE)) return 'jsonp';
+  }
+  return 'client';
+};
+
 Resource.prototype.get = function(callback) {
   request.call(this, 'get', null, callback);
 };
@@ -144,7 +152,19 @@ var expandVariables = function(string, params) {
 var request = function(method, data, callback) {
   if (!this.url) return callback(null, {});
 
-  var request_type = requestType.call(this);
+  var request_type;
+  switch (this.requestType()) {
+  case 'proxy':
+    request_type = proxyRequest;
+    break;
+  case 'jsonp':
+    request_type = jsonpRequest;
+    break;
+  case 'client':
+    request_type = clientRequest;
+    break;
+  }
+
   var result = {request_time: new Date().getTime()};
   request_type.call(this, method, data, function(err, res, data) {
     result.response_time = new Date().getTime();
@@ -152,17 +172,6 @@ var request = function(method, data, callback) {
     result.data = data;
     callback(err, result);
   });
-};
-
-var requestType = function() {
-  var proxy, jsonp;
-  if (!Resource.isNode) {
-    proxy = this.options.proxy;
-    jsonp = this.options.jsonp || (this.options.with_credentials && Resource.isIE);
-  }
-  if (proxy) return proxyRequest;
-  else if (jsonp) return jsonpRequest;
-  else return clientRequest;
 };
 
 var proxyRequest = function(method, data, callback) {
@@ -178,7 +187,7 @@ var jsonpRequest = function(method, data, callback) {
   if (method != 'get' & method != 'post') return callback('Invalid JSONP method: ' + method);
 
   var callbackName = 'solidus_client_jsonp_callback_' + Math.round(100000 * Math.random());
-  var query = querystring.stringify(_.extend({callback: callbackName}, this.options.query || {}, _.isObject(data) ? data : {}));
+  var query = querystring.stringify(_.extend({}, this.options.query || {}, {callback: callbackName}, _.isObject(data) ? data : {}));
   if (_.isString(data)) query += '&' + data;
 
   var script = document.createElement('script');
@@ -194,12 +203,15 @@ var jsonpRequest = function(method, data, callback) {
 };
 
 var clientRequest = function(method, data, callback) {
-  var request;
-  if (method == 'get') request = superagent.get(this.url);
-  else if (method == 'post') request = superagent.post(this.url).send(data);
-  else return callback('Invalid method: ' + method);
+  if (method != 'get' & method != 'post') return callback('Invalid method: ' + method);
 
-  if (this.options.query) request.query(this.options.query);
+  var url = this.url;
+  var query = querystring.stringify(this.options.query || {});
+  if (query) {
+    url += (url.indexOf('?') >= 0 ? '&' : '?') + query;
+  }
+
+  var request = method == 'get' ? superagent.get(url) : superagent.post(url).send(data);
   if (this.options.headers) request.set(this.options.headers);
   if (this.options.auth) request.auth(this.options.auth.user, this.options.auth.pass);
   if (this.options.with_credentials && !Resource.isNode) request.withCredentials();
