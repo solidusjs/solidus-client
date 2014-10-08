@@ -21,7 +21,7 @@ describe('SolidusClient', function() {
     it('with a bad resource', function(done) {
       var solidus_client = new SolidusClient();
       solidus_client.getResource(host + '/not-json', null, function(err, res) {
-        assert.equal(err, 'Invalid JSON: Unexpected token o');
+        assert.equal(err.indexOf('Invalid JSON'), 0);
         assert(!res);
         done();
       });
@@ -49,9 +49,7 @@ describe('SolidusClient', function() {
       };
 
       solidus_client.getResources(resources, null, function(err, res) {
-        assert.deepEqual(err, {
-          second: 'Invalid JSON: Unexpected token o'
-        });
+        assert.equal(err.second.indexOf('Invalid JSON'), 0);
         assert.deepEqual(res, {
           first:  {url: '/page'},
           third:  {url: '/page?a=1'},

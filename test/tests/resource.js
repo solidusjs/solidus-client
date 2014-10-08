@@ -116,14 +116,15 @@ describe('Resource', function() {
     it('with bad fetched data', function(done) {
       var resource = new Resource(host + '/not-json');
       resource.get(function(err, res) {
-        assert.equal(err, "Invalid JSON: Unexpected token o");
+        assert.equal(err.indexOf('Invalid JSON'), 0);
         assert(!res.data);
         done();
       });
     });
 
     it('with connection error', function(done) {
-      var resource = new Resource('http://localhost:0000');
+      // If this test fails, maybe you have something running on port 8888?
+      var resource = new Resource('http://localhost:8888');
       resource.get(function(err, res) {
         assert(err);
         assert(!res.data);
