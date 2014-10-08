@@ -1,6 +1,7 @@
 var assert = require('assert');
 
 var Resource = require('../../lib/resource');
+var util = require('../../lib/util');
 var host = require('../config').host;
 
 module.exports = function() {
@@ -63,7 +64,7 @@ describe('Resource', function() {
 
   it('.requestType', function(done) {
     var resource;
-    if (Resource.isNode) {
+    if (util.isNode) {
       resource = new Resource({url: 'http://solidus.com'});
       assert.equal(resource.requestType(), 'client');
 
@@ -75,7 +76,7 @@ describe('Resource', function() {
 
       resource = new Resource({url: 'http://solidus.com', with_credentials: true});
       assert.equal(resource.requestType(), 'client');
-    } else if (Resource.isIE) {
+    } else if (util.isIE) {
       resource = new Resource({url: 'http://solidus.com'});
       assert.equal(resource.requestType(), 'client');
 
@@ -146,7 +147,7 @@ describe('Resource', function() {
       resource.options = {query: {b: '3', c: '4'}};
       resource.get(function(err, res) {
         assert.equal(err, null);
-        assert.deepEqual(res.data, {url: '/page?a=1&b%5B0%5D=2&b%5B1%5D=3&c=4'});
+        assert.deepEqual(res.data, {url: '/page?a=1&b=3&c=4'});
         done();
       });
     });
@@ -185,7 +186,7 @@ describe('Resource', function() {
       var resource = new Resource({url: host + '/page?a=1', query: {b: 2}, with_credentials: true});
       resource.get(function(err, res) {
         assert.equal(err, null);
-        if (Resource.isIE) {
+        if (util.isIE) {
           assert.deepEqual(res.data, {url: '/page?a=1&b=2&callback=solidus_client_jsonp_callback_100000'});
         } else {
           assert.deepEqual(res.data, {url: '/page?a=1&b=2'});
@@ -212,7 +213,7 @@ describe('Resource', function() {
       });
     });
 
-    if (!Resource.isNode) {
+    if (!util.isNode) {
       describe('with proxy', function() {
         it('with default solidus api route', function(done) {
           var resource = new Resource({url: 'http://solidus.com', proxy: true});
@@ -272,7 +273,7 @@ describe('Resource', function() {
       });
     });
 
-    if (!Resource.isNode) {
+    if (!util.isNode) {
       describe('with proxy', function() {
         it('is not supported', function(done) {
           var resource = new Resource({url: host + '/with-post-object?a=1', query: {b: 2}, proxy: true});

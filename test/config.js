@@ -27,7 +27,7 @@ module.exports.routes = function (req, res) {
   case '/page?a=':
   case '/page?a=1':
   case '/page?a=1&b=2':
-  case '/page?a=1&b%5B0%5D=2&b%5B1%5D=3&c=4':
+  case '/page?a=1&b=3&c=4':
   case '/page?a=,&b=%2C&c=,&d=%2C':
   case '/api/resource.json?url=http%3A%2F%2Fsolidus.com':
   case '/custom/route/resource.json?url=http%3A%2F%2Fsolidus.com':
