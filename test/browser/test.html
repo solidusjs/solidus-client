@@ -8,10 +8,23 @@
   <div id="mocha"></div>
   <script src="mocha.js"></script>
   <script>mocha.setup({ui: 'bdd', globals: ['solidus_client_jsonp_callback_100000']})</script>
-  <script src="tests.js"></script>
+  <script src="test.js"></script>
   <script>
     mocha.checkLeaks();
-    mocha.run();
+
+    var mocha_finished = false;
+    var mocha_failures = [];
+    var mocha_stats    = {};
+    var runner = mocha.run(function() {
+      mocha_stats.tests    = runner.stats.tests;
+      mocha_stats.passes   = runner.stats.passes;
+      mocha_stats.failures = runner.stats.failures;
+      mocha_stats.duration = runner.stats.duration;
+      mocha_finished       = true;
+    });
+    runner.on('fail', function(test, err) {
+      mocha_failures.push([test.fullTitle(), err.message]);
+    });
   </script>
 </body>
 </html>

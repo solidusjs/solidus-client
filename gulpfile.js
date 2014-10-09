@@ -6,8 +6,9 @@ var derequire = require('gulp-derequire');
 var rename = require('gulp-rename');
 var runSequence = require('run-sequence');
 var http = require('http');
+var BrowserStackTunnel = require('browserstacktunnel-wrapper');
+
 var config = require('./test/config');
-var server;
 
 gulp.task('default', ['build']);
 
@@ -20,40 +21,108 @@ gulp.task('build', function() {
     .pipe(gulp.dest('./build'));
 });
 
-gulp.task('build-test', function() {
+gulp.task('test', function(callback) {
+  runSequence(
+    ['build-browser-test', 'start-test-server', 'start-browserstack-tunnel'],
+    'run-node-test',
+    'run-browser-test',
+    function() {
+      runSequence(
+        ['stop-test-server', 'stop-browserstack-tunnel'],
+        callback);
+    }
+  );
+});
+
+gulp.task('node-test', function(callback) {
+  runSequence(
+    'start-test-server',
+    'run-node-test',
+    function() {
+      runSequence(
+        'stop-test-server',
+        callback);
+    }
+  );
+});
+
+gulp.task('browser-test', function(callback) {
+  runSequence(
+    ['build-browser-test', 'start-test-server', 'start-browserstack-tunnel'],
+    'run-browser-test',
+    function() {
+      runSequence(
+        ['stop-test-server', 'stop-browserstack-tunnel'],
+        callback);
+    }
+  );
+});
+
+gulp.task('test-server', function(callback) {
+  runSequence(
+    ['build-browser-test', 'start-test-server'],
+    callback);
+});
+
+// TASKS
+
+gulp.task('build-browser-test', function() {
   return gulp
-    .src('./test/tests.js')
+    .src('./test/test.js')
     .pipe(browserify())
     .pipe(gulp.dest('./test/browser'));
 });
 
-gulp.task('test', function(callback) {
-  runSequence('startServer', 'mocha', function() {
-    runSequence('stopServer', callback);
-  });
-});
-
-gulp.task('test-browser', function(callback) {
-  runSequence('build-test', 'startServer', callback);
-});
-
-gulp.task('startServer', function(callback) {
-  server = http
+var test_server;
+gulp.task('start-test-server', function(callback) {
+  test_server = http
     .createServer(config.routes)
     .listen(config.port, function() {
-      gutil.log('Test server listening on', gutil.colors.green(config.host));
+      gutil.log('Test server started on', gutil.colors.green(config.host));
       callback();
     });
 });
 
-gulp.task('stopServer', function(callback) {
-  server.close(callback);
+gulp.task('stop-test-server', function(callback) {
+  test_server.close(callback);
 });
 
-gulp.task('mocha', function(callback) {
+var browserstack_tunnel;
+gulp.task('start-browserstack-tunnel', function(callback) {
+  var port = 3000;
+
+  browserstack_tunnel = new BrowserStackTunnel({
+    key: 'TODO',
+    hosts: [{
+      name: 'localhost',
+      port: port,
+      sslFlag: 0
+    }],
+    v: true
+  });
+
+  browserstack_tunnel.start(function(err) {
+    if (!err) gutil.log('BrowserStack tunnel started on', gutil.colors.green('http://localhost:' + port));
+    callback(err);
+  });
+});
+
+gulp.task('stop-browserstack-tunnel', function(callback) {
+  browserstack_tunnel.stop(callback);
+});
+
+gulp.task('run-node-test', function(callback) {
   gulp
-    .src('./test/tests.js', {read: false})
+    .src('./test/test.js', {read: false})
     .pipe(mocha())
+    .on('end', callback)
+    .on('error', function() {});
+});
+
+gulp.task('run-browser-test', function(callback) {
+  gulp
+    .src('./test/browser-test.js', {read: false})
+    .pipe(mocha({timeout: 60000}))
     .on('end', callback)
     .on('error', function() {});
 });
