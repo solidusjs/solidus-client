@@ -6,7 +6,7 @@ module.exports.host = 'http://localhost:' + module.exports.port;
 
 module.exports.routes = function (req, res) {
   if (req.url.indexOf('/test/browser/') == 0) {
-    fs.readFile('.' + req.url, function(err, data) {
+    fs.readFile('.' + req.url.replace(/\?.*$/, ''), function(err, data) {
       res.writeHead(200);
       res.end(err || data);
     });
@@ -70,7 +70,7 @@ module.exports.routes = function (req, res) {
 
   case '/with-deflate':
     if (req.headers['accept-encoding'].indexOf('deflate') >= 0) {
-      zlib.deflate('{"url": "/with-deflate"}', function(err, response) {
+      zlib.deflateRaw('{"url": "/with-deflate"}', function(err, response) {
         res.writeHead(200, {'Content-Encoding': 'deflate'});
         res.end(response);
       });
