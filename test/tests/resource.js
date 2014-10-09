@@ -204,15 +204,6 @@ describe('Resource', function() {
       });
     });
 
-    it('with a deflated response', function(done) {
-      var resource = new Resource(host + '/with-deflate');
-      resource.get(function(err, res) {
-        assert.equal(err, null);
-        assert.deepEqual(res.data, {url: '/with-deflate'});
-        done();
-      });
-    });
-
     if (!util.isNode) {
       describe('with proxy', function() {
         it('with default solidus api route', function(done) {

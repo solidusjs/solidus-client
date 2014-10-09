@@ -68,15 +68,6 @@ module.exports.routes = function (req, res) {
     } else not_found();
     break;
 
-  case '/with-deflate':
-    if (req.headers['accept-encoding'].indexOf('deflate') >= 0) {
-      zlib.deflateRaw('{"url": "/with-deflate"}', function(err, response) {
-        res.writeHead(200, {'Content-Encoding': 'deflate'});
-        res.end(response);
-      });
-    } else not_found();
-    break;
-
   case '/with-post-object?a=1&b=2':
     if (req.method == 'POST') {
       var body = '';
