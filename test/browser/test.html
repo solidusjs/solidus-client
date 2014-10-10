@@ -7,21 +7,32 @@
 <body>
   <div id="mocha"></div>
   <script src="mocha.js"></script>
-  <script>mocha.setup({ui: 'bdd', globals: ['solidus_client_jsonp_callback_100000']})</script>
+  <script>
+    mocha.setup({
+      ui:      'bdd',
+      globals: ['solidus_client_jsonp_callback_100000']
+    });
+  </script>
   <script src="test.js"></script>
   <script>
     mocha.checkLeaks();
 
     var mocha_finished = false;
     var mocha_failures = [];
-    var mocha_stats    = {};
-    var runner = mocha.run(function() {
-      mocha_stats.tests    = runner.stats.tests;
-      mocha_stats.passes   = runner.stats.passes;
-      mocha_stats.failures = runner.stats.failures;
-      mocha_stats.duration = runner.stats.duration;
-      mocha_finished       = true;
-    });
+    var mocha_stats    = {tests: 0, passes: 0, failures: 0, duration: 0};
+    var runner;
+
+    var finished = function() {
+      if (runner) {
+        mocha_stats.tests    = runner.stats.tests;
+        mocha_stats.passes   = runner.stats.passes;
+        mocha_stats.failures = runner.stats.failures;
+        mocha_stats.duration = runner.stats.duration;
+      }
+      mocha_finished = true;
+    };
+
+    runner = mocha.run(finished);
     runner.on('fail', function(test, err) {
       mocha_failures.push([test.fullTitle(), err.message]);
     });
