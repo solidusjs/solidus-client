@@ -152,12 +152,14 @@ describe('Resource', function() {
       });
     });
 
-    it('does not encode query strings', function(done) {
+    it('escapes query strings', function(done) {
+      // Only unescaped url query strings are escaped
       var resource = new Resource(host + '/page?a=,&b=%2C');
+      // All query strings options are escaped
       resource.options = {query: {c: ',', d: '%2C'}};
       resource.get(function(err, res) {
         assert.equal(err, null);
-        assert.deepEqual(res.data, {url: '/page?a=,&b=%2C&c=,&d=%2C'});
+        assert.deepEqual(res.data, {url: '/page?a=%2C&b=%2C&c=%2C&d=%252C'});
         done();
       });
     });

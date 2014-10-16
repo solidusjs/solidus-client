@@ -37,7 +37,7 @@ module.exports.routes = function (req, res) {
   case 'GET /page?a=1':
   case 'GET /page?a=1&b=2':
   case 'GET /page?a=1&b=3&c=4':
-  case 'GET /page?a=,&b=%2C&c=,&d=%2C':
+  case 'GET /page?a=%2C&b=%2C&c=%2C&d=%252C':
   case 'GET /api/resource.json?url=http%3A%2F%2Fsolidus.com':
   case 'GET /custom/route/resource.json?url=http%3A%2F%2Fsolidus.com':
   case 'GET /page?a=1&b=2&callback=solidus_client_jsonp_callback_100000':
