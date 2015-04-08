@@ -37,14 +37,14 @@ describe('Resource', function() {
     it('with resources options', function(done) {
       var resources_options = {
         'http://solidus.ca/page': {a: 2, b: 2, c: 1},
-        'http://solidus.com/p.*': {a: 3, b: 3, d: 1},
-        'http://solidus.com/page': {timeout: 10000, a: 4, b: 4, e: 1},
+        'http://solidus.com/p.*': {a: 3, b: 3, d: 1, g: {h: 1, i: 2}},
+        'http://solidus.com/page': {timeout: 10000, a: 4, b: 4, e: 1, g: {h: 2}},
         'http://solidus.com/status': {a: 5, b: 5, f: 1}
       };
-      var resource = new Resource({url: 'http://solidus.com/page', a: 1}, resources_options);
+      var resource = new Resource({url: 'http://solidus.com/page', a: 1, g: {j: 3}}, resources_options);
       assert.equal(resource.url, 'http://solidus.com/page');
       assert(!resource.dynamic);
-      assert.deepEqual(resource.options, {timeout: 10000, a: 1, b: 4, d: 1, e: 1});
+      assert.deepEqual(resource.options, {timeout: 10000, a: 1, b: 4, d: 1, e: 1, g: {h: 2, i: 2, j: 3}});
       done();
     });
 
@@ -210,6 +210,32 @@ describe('Resource', function() {
         assert.equal(err, null);
         assert.deepEqual(res.data, {url: '/page?a=%2C&b=%2C&c=%2C&d=%252C'});
         done();
+      });
+    });
+
+    describe('with nested query strings', function() {
+      var resource;
+
+      beforeEach(function() {
+        resource = new Resource(host + '/page');
+        resource.options = {query: {a: 1, b: '2', c: [3, '4'], d: {e: 5, f: [6, 7]}}};
+      });
+
+      it('with default options', function(done) {
+        resource.get(function(err, res) {
+          assert.equal(err, null);
+          assert.deepEqual(res.data, {url: '/page?a=1&b=2&c%5B0%5D=3&c%5B1%5D=4&d%5Be%5D=5&d%5Bf%5D%5B0%5D=6&d%5Bf%5D%5B1%5D=7'});
+          done();
+        });
+      });
+
+      it('with json objectFormat', function(done) {
+        resource.options.query_options = {objectFormat: 'json'};
+        resource.get(function(err, res) {
+          assert.equal(err, null);
+          assert.deepEqual(res.data, {url: '/page?a=1&b=2&c%5B0%5D=3&c%5B1%5D=4&d=%7B%22e%22%3A5%2C%22f%22%3A%5B6%2C7%5D%7D'});
+          done();
+        });
       });
     });
 
