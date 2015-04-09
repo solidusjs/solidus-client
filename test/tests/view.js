@@ -174,6 +174,19 @@ describe('View', function() {
       });
   });
 
+  it('preprocessor returns an invalid redirect array', function(done) {
+    view.preprocessor = function(context) {
+      return ['http://www.test.com'];
+    };
+    solidus_client
+      .render(view)
+      .end(function(err, html) {
+        assert.ifError(err);
+        assert.equal(html, ' helped');
+        done();
+      });
+  });
+
   if (util.isNode) {
     describe('with server', function() {
       it('preprocessor returns a redirect url', function(done) {
