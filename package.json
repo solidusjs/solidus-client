@@ -36,7 +36,9 @@
     "browserstack-webdriver": "~2.41.1"
   },
   "dependencies": {
+    "extend": "^2.0.0",
     "handlebars-helper": ">=0.0.12",
+    "qs": "^2.4.1",
     "superagent": "1.1.0",
     "underscore": "~1.6.0"
   }

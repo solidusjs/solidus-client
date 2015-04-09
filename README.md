@@ -27,6 +27,7 @@ Rendering a template starts with the `render` function call, and ends with the `
   Available options:
    - `url` - Resource URL.
    - `query` - Object of query values to add to the resource URL.
+   - `query_options` - Options passed to [`qs.stringify`](https://github.com/hapijs/qs#stringifying), the function used to serialize the `query` object. An additional option is available, `objectFormat: 'json'`, which will encode query values of type object into JSON strings.
    - `headers` - Object of HTTP headers to add to the resource request.
    - `auth` - Object with `user` and `pass` values for HTTP Basic authentication.
    - `with_credentials` - Whether to send cookies from the origin. Defaults to `false`.
