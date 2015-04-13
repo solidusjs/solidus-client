@@ -119,6 +119,53 @@ describe('Resource', function() {
     done();
   });
 
+  describe('.key', function() {
+    var options;
+
+    beforeEach(function() {
+      options = {
+        url: 'http://solidus.com',
+        query: {a: 1},
+        headers: {a: 2},
+        auth: {user: 'a', pass: 3},
+        with_credentials: true,
+        timeout: 1,
+        solidus_api_route: '/api/extra/'
+      };
+    });
+
+    it('with client request', function(done) {
+      var url;
+      if (util.isNode) {
+        url = 'http://solidus.com?a=1|{"a":2}|{"user":"a","pass":3}';
+      } else if (util.isIE) {
+        options.with_credentials = false;
+        url = 'http://solidus.com?a=1|{"a":2}|{"user":"a","pass":3}';
+      } else {
+        url = 'http://solidus.com?a=1|{"a":2}|{"user":"a","pass":3}|{"with_credentials":true}';
+      }
+      var resource = new Resource(options);
+      assert.equal(resource.key(), url);
+      done();
+    });
+
+    if (!util.isNode) {
+      it('with proxy request', function(done) {
+        options.proxy = true;
+        var resource = new Resource(options);
+        assert.equal(resource.key(), '/api/extra/resource.json?url=http%3A%2F%2Fsolidus.com%3Fa%3D1');
+        done();
+      });
+
+      it('with jsonp request', function(done) {
+        options.jsonp = true;
+        var resource = new Resource(options);
+        assert.equal(resource.key(), 'http://solidus.com?a=1');
+        done();
+      });
+    }
+  });
+
   describe('.get', function() {
     it('fetches the resource and returns the body as an object', function(done) {
       var resource = new Resource(host + '/page');
@@ -293,10 +340,10 @@ describe('Resource', function() {
     if (!util.isNode) {
       describe('with proxy', function() {
         it('with default solidus api route', function(done) {
-          var resource = new Resource({url: 'http://solidus.com', proxy: true});
+          var resource = new Resource({url: 'http://solidus.com', query: {a: 1}, proxy: true});
           resource.get(function(err, res) {
             assert.equal(err, null);
-            assert.deepEqual(res.data, {url: '/api/resource.json?url=http%3A%2F%2Fsolidus.com'});
+            assert.deepEqual(res.data, {url: '/api/resource.json?url=http%3A%2F%2Fsolidus.com%3Fa%3D1'});
             done();
           });
         });
