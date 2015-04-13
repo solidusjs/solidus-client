@@ -248,6 +248,17 @@ Resource.prototype.requestType = function() {
   return 'client';
 };
 
+// String that can be used as a cache key, represents everything that is unique about the request
+Resource.prototype.key = function() {
+  var parts = [requestUrl.call(this)];
+  if (this.requestType() === 'client') {
+    if (this.options.headers) parts.push(JSON.stringify(this.options.headers));
+    if (this.options.auth) parts.push(JSON.stringify(_.pick(this.options.auth, 'user', 'pass')));
+    if (this.options.with_credentials && !util.isNode) parts.push(JSON.stringify({with_credentials: true}));
+  }
+  return parts.join('|');
+};
+
 Resource.prototype.get = function(callback) {
   request.call(this, 'get', null, callback);
 };
@@ -287,7 +298,7 @@ var initializeOptions = function(options, resources_options, params) {
     if (!_.isString(value)) return;
     var expanded = expandVariables(value, params);
     self.options.query[name] = expanded[0];
-    if (expanded[1]) self.dynamic = expanded[1];
+    if (expanded[1]) self.dynamic = true;
   });
 };
 
@@ -329,16 +340,33 @@ var request = function(method, data, callback) {
   });
 };
 
+var requestUrl = function() {
+  if (!this.url) return;
+
+  switch (this.requestType()) {
+  case 'proxy':
+    return proxyRequestUrl.call(this);
+  case 'jsonp':
+    return jsonpRequestUrl.call(this);
+  case 'client':
+    return clientRequestUrl.call(this);
+  }
+};
+
 var proxyRequest = function(method, data, callback) {
   if (method != 'get') return callback('Invalid proxy method: ' + method);
 
-  var route   = (this.options.solidus_api_route || DEFAULT_SOLIDUS_API_ROUTE) + 'resource.json';
-  var url     = buildUrl.call(this, route, {url: this.url});
-  var request = superagent.get(url);
+  var request = superagent.get(proxyRequestUrl.call(this));
 
   if (this.options.timeout) request.timeout(this.options.timeout);
 
   superAgentRequest(request, callback);
+};
+
+var proxyRequestUrl = function() {
+  var route = (this.options.solidus_api_route || DEFAULT_SOLIDUS_API_ROUTE) + 'resource.json';
+  var url   = buildUrl.call(this, this.url);
+  return route + '?url=' + encodeURIComponent(url);
 };
 
 var jsonpRequest = function(method, data, callback) {
@@ -346,7 +374,7 @@ var jsonpRequest = function(method, data, callback) {
 
   var self = this;
   var callbackName = 'solidus_client_jsonp_callback_' + Math.round(100000 * Math.random());
-  var url = buildUrl.call(self, self.url, {callback: callbackName}, _.isObject(data) ? data : {});
+  var url = buildUrl.call(self, jsonpRequestUrl.call(self), {callback: callbackName}, _.isObject(data) ? data : {});
   if (_.isString(data)) url += '&' + data;
 
   var script = document.createElement('script');
@@ -371,10 +399,14 @@ var jsonpRequest = function(method, data, callback) {
   document.body.appendChild(script);
 };
 
+var jsonpRequestUrl = function(data) {
+  return buildUrl.call(this, this.url);
+};
+
 var clientRequest = function(method, data, callback) {
   if (method != 'get' & method != 'post') return callback('Invalid method: ' + method);
 
-  var url     = buildUrl.call(this, this.url);
+  var url     = clientRequestUrl.call(this);
   var request = method == 'get' ? superagent.get(url) : superagent.post(url).send(data);
 
   if (this.options.headers) request.set(this.options.headers);
@@ -383,6 +415,10 @@ var clientRequest = function(method, data, callback) {
   if (this.options.timeout) request.timeout(this.options.timeout);
 
   superAgentRequest(request, callback);
+};
+
+var clientRequestUrl = function() {
+  return buildUrl.call(this, this.url);
 };
 
 var buildUrl = function(url) {
