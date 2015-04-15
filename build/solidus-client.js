@@ -243,7 +243,7 @@ var Resource = function(options, resources_options, params) {
 Resource.prototype.requestType = function() {
   if (!util.isNode) {
     if (this.options.proxy) return 'proxy';
-    if (this.options.jsonp || (this.options.with_credentials && util.isIE)) return 'jsonp';
+    if (this.options.jsonp || (this.options.with_credentials && !util.supportsCORS)) return 'jsonp';
   }
   return 'client';
 };
@@ -382,7 +382,7 @@ var jsonpRequest = function(method, data, callback) {
 
   var timer;
   var jsonpCallback = _.once(function(data) {
-    document.body.removeChild(script);
+    document.getElementsByTagName('head')[0].removeChild(script);
     if (data instanceof Error) return callback(data);
     if (timer) clearTimeout(timer);
     processResponse({status: 200}, data, callback);
@@ -396,7 +396,7 @@ var jsonpRequest = function(method, data, callback) {
     }, self.options.timeout);
   }
 
-  document.body.appendChild(script);
+  document.getElementsByTagName('head')[0].appendChild(script);
 };
 
 var jsonpRequestUrl = function(data) {
@@ -493,7 +493,7 @@ module.exports = Resource;
 },{"./base64":2,"./util":4,"extend":6,"qs":110,"superagent":115,"underscore":118}],4:[function(_dereq_,module,exports){
 module.exports.isNode = !(typeof window !== 'undefined' && window !== null);
 
-module.exports.isIE = typeof XDomainRequest !== 'undefined';
+module.exports.supportsCORS = !module.exports.isNode && (('withCredentials' in new XMLHttpRequest()) || (typeof XDomainRequest !== 'undefined'));
 
 },{}],5:[function(_dereq_,module,exports){
 var _ = _dereq_('underscore');

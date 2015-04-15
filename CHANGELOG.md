@@ -1,3 +1,8 @@
+## 1.2.1 (Apr 15, 2015)
+
+ - Fix JSONP requests for non-ready body element [[ec7c259](https://github.com/solidusjs/solidus-client/commit/ec7c25989754cf65791504ec8a956c347a8cd5f6)]
+ - Tweak CORS support [[1a7086f](https://github.com/solidusjs/solidus-client/commit/1a7086f70d0075ecf568c116a95b191cbd35bae9)]
+
 ## 1.2.0 (Apr 13, 2015)
 
  - Add resource.key(), fix proxy url to include query part [[a8f72d5](https://github.com/solidusjs/solidus-client/commit/a8f72d5bc3b09fc6b46553dd525c872ff010285e)]
