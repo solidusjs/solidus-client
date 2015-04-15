@@ -91,7 +91,7 @@ describe('Resource', function() {
 
       resource = new Resource({url: 'http://solidus.com', with_credentials: true});
       assert.equal(resource.requestType(), 'client');
-    } else if (util.isIE) {
+    } else if (util.supportsCORS) {
       resource = new Resource({url: 'http://solidus.com'});
       assert.equal(resource.requestType(), 'client');
 
@@ -102,7 +102,7 @@ describe('Resource', function() {
       assert.equal(resource.requestType(), 'jsonp');
 
       resource = new Resource({url: 'http://solidus.com', with_credentials: true});
-      assert.equal(resource.requestType(), 'jsonp');
+      assert.equal(resource.requestType(), 'client');
     } else {
       resource = new Resource({url: 'http://solidus.com'});
       assert.equal(resource.requestType(), 'client');
@@ -114,7 +114,7 @@ describe('Resource', function() {
       assert.equal(resource.requestType(), 'jsonp');
 
       resource = new Resource({url: 'http://solidus.com', with_credentials: true});
-      assert.equal(resource.requestType(), 'client');
+      assert.equal(resource.requestType(), 'jsonp');
     }
     done();
   });
@@ -138,11 +138,11 @@ describe('Resource', function() {
       var url;
       if (util.isNode) {
         url = 'http://solidus.com?a=1|{"a":2}|{"user":"a","pass":3}';
-      } else if (util.isIE) {
+      } else if (util.supportsCORS) {
+        url = 'http://solidus.com?a=1|{"a":2}|{"user":"a","pass":3}|{"with_credentials":true}';
+      } else {
         options.with_credentials = false;
         url = 'http://solidus.com?a=1|{"a":2}|{"user":"a","pass":3}';
-      } else {
-        url = 'http://solidus.com?a=1|{"a":2}|{"user":"a","pass":3}|{"with_credentials":true}';
       }
       var resource = new Resource(options);
       assert.equal(resource.key(), url);
@@ -310,10 +310,10 @@ describe('Resource', function() {
       var resource = new Resource({url: host + '/page?a=1', query: {b: 2}, with_credentials: true});
       resource.get(function(err, res) {
         assert.equal(err, null);
-        if (util.isIE) {
-          assert.deepEqual(res.data, {url: '/page?a=1&b=2&callback=solidus_client_jsonp_callback_100000'});
-        } else {
+        if (util.isNode || util.supportsCORS) {
           assert.deepEqual(res.data, {url: '/page?a=1&b=2'});
+        } else {
+          assert.deepEqual(res.data, {url: '/page?a=1&b=2&callback=solidus_client_jsonp_callback_100000'});
         }
         done();
       });
