@@ -7,16 +7,6 @@ var host = require('../config').host;
 module.exports = function() {
 
 describe('Resource', function() {
-  var random = Math.random;
-
-  before(function() {
-    Math.random = function() {return 1};
-  })
-
-  after(function() {
-    Math.random = random;
-  });
-
   describe('.constructor', function() {
     it('initializes url, dynamic and options', function(done) {
       var resource = new Resource('http://solidus.com/page');
@@ -313,7 +303,7 @@ describe('Resource', function() {
         if (util.isNode || util.supportsCORS) {
           assert.deepEqual(res.data, {url: '/page?a=1&b=2'});
         } else {
-          assert.deepEqual(res.data, {url: '/page?a=1&b=2&callback=solidus_client_jsonp_callback_100000'});
+          assert.deepEqual(res.data, {url: '/page?a=1&b=2&callback=solidus_client_jsonp_callback'});
         }
         done();
       });
@@ -369,19 +359,46 @@ describe('Resource', function() {
 
       describe('with jsonp', function() {
         it('with successful response', function(done) {
-          var resource = new Resource({url: 'http://localhost:8081/page?a=1', query: {b: 2}, jsonp: true});
+          var resource = new Resource({url: host + '/page?a=1', query: {b: 2}, jsonp: true});
           resource.get(function(err, res) {
             assert.equal(err, null);
-            assert.deepEqual(res.data, {url: '/page?a=1&b=2&callback=solidus_client_jsonp_callback_100000'});
+            assert.deepEqual(res.data, {url: '/page?a=1&b=2&callback=solidus_client_jsonp_callback'});
             done();
           });
         });
 
         it('with timeout', function(done) {
-          var resource = new Resource({url: 'http://localhost:8081/with-delay', jsonp: true, timeout: 1});
+          var called;
+          var resource = new Resource({url: host + '/with-delay', jsonp: true, timeout: 1});
           resource.get(function(err, res) {
             assert.equal(err.message, 'timeout of 1ms exceeded');
-            assert(!res.data)
+            assert(!res.data);
+            assert(!called);
+            called = true;
+
+            // Highjack the jsonp callback, to end the test when the real request come back
+            var oldCallback = window[err.callbackName];
+            window[err.callbackName] = function(data) {
+              assert.deepEqual(data, {url: '/with-delay?callback=solidus_client_jsonp_callback'});
+              oldCallback(data);
+              assert(!window[err.callbackName]);
+              done();
+            }
+          });
+        });
+
+        it('with connection error', function(done) {
+          // If this test fails, maybe you have something running on port 8888?
+          var called;
+          var resource = new Resource({url: 'http://localhost:8888', jsonp: true, timeout: 1});
+          resource.get(function(err, res) {
+            assert.equal(err.message, 'timeout of 1ms exceeded');
+            assert(!res.data);
+            assert(!called);
+            called = true;
+
+            // The real request will never come back
+            window[err.callbackName]({});
             done();
           });
         });
@@ -434,7 +451,7 @@ describe('Resource', function() {
           var resource = new Resource({url: host + '/with-post-object?a=1', query: {b: 2}, jsonp: true});
           resource.post({id: 1, type: 'object'}, function(err, res) {
             assert.equal(err, null);
-            assert.deepEqual(res.data, {url: '/with-post-object?a=1&b=2&callback=solidus_client_jsonp_callback_100000&id=1&type=object'});
+            assert.deepEqual(res.data, {url: '/with-post-object?a=1&b=2&callback=solidus_client_jsonp_callback&id=1&type=object'});
             done();
           });
         });
@@ -443,7 +460,7 @@ describe('Resource', function() {
           var resource = new Resource({url: host + '/with-post-string?a=1', query: {b: 2}, jsonp: true});
           resource.post('id=1&type=string', function(err, res) {
             assert.equal(err, null);
-            assert.deepEqual(res.data, {url: '/with-post-string?a=1&b=2&callback=solidus_client_jsonp_callback_100000&id=1&type=string'});
+            assert.deepEqual(res.data, {url: '/with-post-string?a=1&b=2&callback=solidus_client_jsonp_callback&id=1&type=string'});
             done();
           });
         });
@@ -452,7 +469,7 @@ describe('Resource', function() {
           var resource = new Resource({url: host + '/with-post-empty?a=1', query: {b: 2}, jsonp: true});
           resource.post(null, function(err, res) {
             assert.equal(err, null);
-            assert.deepEqual(res.data, {url: '/with-post-empty?a=1&b=2&callback=solidus_client_jsonp_callback_100000'});
+            assert.deepEqual(res.data, {url: '/with-post-empty?a=1&b=2&callback=solidus_client_jsonp_callback'});
             done();
           });
         });

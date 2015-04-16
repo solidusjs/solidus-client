@@ -1,5 +1,6 @@
 var fs   = require('fs');
 var zlib = require('zlib');
+var url  = require('url');
 
 module.exports.port = 8081;
 module.exports.host = 'http://localhost:' + module.exports.port;
@@ -18,20 +19,22 @@ module.exports.routes = function (req, res) {
   }
 
   var success = function(data) {
-    data || (data = {url: req.url});
+    data || (data = {url: req.url.replace(/solidus_client_jsonp_callback_\d+/, 'solidus_client_jsonp_callback')});
     res.writeHead(200, {'Content-Type': 'application/json'});
-    if (req.url.indexOf('solidus_client_jsonp_callback_100000') == -1) {
-      res.end(JSON.stringify(data));
+    var callback = url.parse(req.url, true).query.callback;
+    if (callback) {
+      res.end(callback + '(' + JSON.stringify(data) + ');');
     } else {
-      res.end('solidus_client_jsonp_callback_100000(' + JSON.stringify(data) + ');');
+      res.end(JSON.stringify(data));
     }
   };
+
   var not_found = function() {
     res.writeHead(404, {'Content-Type': 'application/json'});
     res.end(JSON.stringify({error: 'Not Found: ' + req.url}));
   };
 
-  switch (req.method + ' ' + req.url) {
+  switch ((req.method + ' ' + req.url).replace(/solidus_client_jsonp_callback_\d+/, 'solidus_client_jsonp_callback')) {
   case 'GET /page':
   case 'GET /page?a=':
   case 'GET /page?a=1':
@@ -42,10 +45,10 @@ module.exports.routes = function (req, res) {
   case 'GET /page?a=1&b=2&c%5B0%5D=3&c%5B1%5D=4&d=%7B%22e%22%3A5%2C%22f%22%3A%5B6%2C7%5D%7D':
   case 'GET /api/resource.json?url=http%3A%2F%2Fsolidus.com%3Fa%3D1':
   case 'GET /custom/route/resource.json?url=http%3A%2F%2Fsolidus.com':
-  case 'GET /page?a=1&b=2&callback=solidus_client_jsonp_callback_100000':
-  case 'GET /with-post-object?a=1&b=2&callback=solidus_client_jsonp_callback_100000&id=1&type=object':
-  case 'GET /with-post-string?a=1&b=2&callback=solidus_client_jsonp_callback_100000&id=1&type=string':
-  case 'GET /with-post-empty?a=1&b=2&callback=solidus_client_jsonp_callback_100000':
+  case 'GET /page?a=1&b=2&callback=solidus_client_jsonp_callback':
+  case 'GET /with-post-object?a=1&b=2&callback=solidus_client_jsonp_callback&id=1&type=object':
+  case 'GET /with-post-string?a=1&b=2&callback=solidus_client_jsonp_callback&id=1&type=string':
+  case 'GET /with-post-empty?a=1&b=2&callback=solidus_client_jsonp_callback':
     success();
     break;
 
@@ -74,7 +77,7 @@ module.exports.routes = function (req, res) {
 
   case 'GET /with-delay':
   case 'GET /api/resource.json?url=http%3A%2F%2Fsolidus.com%2Fwith-delay':
-  case 'GET /with-delay?callback=solidus_client_jsonp_callback_100000':
+  case 'GET /with-delay?callback=solidus_client_jsonp_callback':
     setTimeout(success, 100);
     break;
 
