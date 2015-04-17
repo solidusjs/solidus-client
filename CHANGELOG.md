@@ -1,3 +1,7 @@
+## 1.2.2 (Apr 16, 2015)
+
+ - Fix CORS and JSONP on older browsers [[2ba8659](https://github.com/solidusjs/solidus-client/commit/2ba86591c8e6419a1b4a94a77780598f77562eb3)]
+
 ## 1.2.1 (Apr 15, 2015)
 
  - Fix JSONP requests for non-ready body element [[ec7c259](https://github.com/solidusjs/solidus-client/commit/ec7c25989754cf65791504ec8a956c347a8cd5f6)]

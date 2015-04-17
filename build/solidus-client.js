@@ -226,7 +226,7 @@ var extend = _dereq_('extend');
 
 var util = _dereq_('./util');
 
-// Superagent uses btoa for auth encoding on the client, which is missing from <IE10
+// SuperAgent uses btoa for auth encoding on the client, which is missing from <IE10
 // https://github.com/visionmedia/superagent#supported-browsers
 if (!util.isNode && !window.btoa) window.btoa = _dereq_('./base64').encode;
 
@@ -381,18 +381,36 @@ var jsonpRequest = function(method, data, callback) {
   script.src = url;
 
   var timer;
-  var jsonpCallback = _.once(function(data) {
-    document.getElementsByTagName('head')[0].removeChild(script);
-    if (data instanceof Error) return callback(data);
-    if (timer) clearTimeout(timer);
-    processResponse({status: 200}, data, callback);
-  });
+  var first = true;
 
-  window[callbackName] = jsonpCallback;
+  window[callbackName] = function(data) {
+    var timedout = data instanceof Error;
+
+    // Cancel timeout
+    if (timer) {
+      clearTimeout(timer);
+      timer = null;
+    }
+
+    // Do not cleanup if there was a timeout, in case the real request ever comes back
+    if (!timedout) {
+      document.getElementsByTagName('head')[0].removeChild(script);
+      delete window[callbackName];
+    }
+
+    // Only run user callback once
+    if (first) {
+      first = false;
+      timedout ? callback(data) : processResponse({status: 200}, data, callback);
+    }
+  };
 
   if (self.options.timeout) {
     timer = setTimeout(function() {
-      jsonpCallback(new Error('timeout of ' + self.options.timeout + 'ms exceeded'));
+      timer = null;
+      var err = new Error('timeout of ' + self.options.timeout + 'ms exceeded');
+      err.callbackName = callbackName; // For testing purposes
+      window[callbackName](err);
     }, self.options.timeout);
   }
 
@@ -448,12 +466,20 @@ var superAgentRequest = function(request, callback) {
   // http://visionmedia.github.io/superagent/#buffering-responses
   if (request.buffer) request.buffer();
 
-  request.end(function(err, res) {
-    // Superagent considers statuses <200 and >=300 as errors
-    // http://visionmedia.github.io/superagent/#error-handling
-    if (err) return callback(err, res);
-    processResponse(res, null, callback);
-  });
+  // Not all weird browser errors are catched by SuperAgent
+  try {
+    request.end(function(err, res) {
+      // In case the request is not async, we don't want to catch the callback exceptions
+      setTimeout(function() {
+        // SuperAgent considers statuses <200 and >=300 as errors
+        // http://visionmedia.github.io/superagent/#error-handling
+        if (err) return callback(err, res);
+        processResponse(res, null, callback);
+      }, 0);
+    });
+  } catch (err) {
+    callback(err);
+  }
 }
 
 var processResponse = function(res, data, callback) {
@@ -493,7 +519,7 @@ module.exports = Resource;
 },{"./base64":2,"./util":4,"extend":6,"qs":110,"superagent":115,"underscore":118}],4:[function(_dereq_,module,exports){
 module.exports.isNode = !(typeof window !== 'undefined' && window !== null);
 
-module.exports.supportsCORS = !module.exports.isNode && (('withCredentials' in new XMLHttpRequest()) || (typeof XDomainRequest !== 'undefined'));
+module.exports.supportsCORS = !module.exports.isNode && (typeof XMLHttpRequest !== 'undefined') && ('withCredentials' in new XMLHttpRequest());
 
 },{}],5:[function(_dereq_,module,exports){
 var _ = _dereq_('underscore');
