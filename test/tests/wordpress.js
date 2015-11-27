@@ -78,7 +78,7 @@ module.exports = function() {
             return context;
           }
         });
-        var processedContext = view.preprocessor({resources: {wordpress: {}, revisions: {}}});
+        var processedContext = view.preprocessor({resources: {wordpress: {}, revisions: ['test']}});
         assert(processedContext.testKey);
         done();
       });
