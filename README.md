@@ -240,7 +240,7 @@ http://mysite.proxy.com/resource1 -> http://resource1.com/images
 http://mysite.proxy.com/resource2 -> http://resource2.com/pictures
 ```
 
-All this information is already available in the AssetsProxy configuration, we can use Solidus to do the hard work instead of manually setuping the proxy. `redirects` returns all the required redirects to effectively turn Solidus into a single proxy for all the assets hosts. Add the redirects to your site's `redirects.js` file:
+All this information is already available in the AssetsProxy configuration, we can use Solidus to do the hard work instead of manually configuring the proxy. `redirects` returns all the required redirects to effectively turn Solidus into a single proxy for all the assets hosts. Add the redirects to your site's `redirects.js` file:
 
 ```javascript
 // Existing site redirects
