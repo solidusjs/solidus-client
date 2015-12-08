@@ -44,13 +44,14 @@ describe('AssetsProxy', function() {
   });
 
   describe('.proxyContextAssets', function() {
-    it('replaces context paths assets URLs by proxies URLs', function() {
-      var assets_proxy = new AssetsProxy([{
-        resource: 'http://resource.com/resource/path',
-        proxy:    'http://proxy.com/proxy/path'
-      }]);
+    var assets_proxy = new AssetsProxy([{
+      resource: 'http://resource.com/resource/path',
+      proxy:    'http://proxy.com/proxy/path'
+    }]);
+    var context;
 
-      var from = {
+    beforeEach(function() {
+      context = {
         v1: 'http://resource.com/resource/path/image.jpg',
         v2: 'http://resource.com/resource/path/image.jpg',
         v3: {
@@ -71,7 +72,62 @@ describe('AssetsProxy', function() {
           {
             v11: 'http://resource.com/resource/path/image.jpg',
             v12: 'http://resource.com/resource/path/image.jpg' }]};
-      var to = {
+    });
+
+    it('replaces context assets URLs by proxies URLs', function() {
+      var expected = {
+        v1: 'http://proxy.com/proxy/path/image.jpg',
+        v2: 'http://proxy.com/proxy/path/image.jpg',
+        v3: {
+          v4: 'http://proxy.com/proxy/path/image.jpg',
+          v5: 'http://proxy.com/proxy/path/image.jpg',
+          v6: {
+            v7: 'http://proxy.com/proxy/path/image.jpg',
+            v8: 'http://proxy.com/proxy/path/image.jpg' },
+          v9: [
+            'http://proxy.com/proxy/path/image.jpg',
+            'http://proxy.com/proxy/path/image.jpg' ]},
+        v10: [
+          'http://proxy.com/proxy/path/image.jpg',
+          'http://proxy.com/proxy/path/image.jpg',
+          [
+            'http://proxy.com/proxy/path/image.jpg',
+            'http://proxy.com/proxy/path/image.jpg' ],
+          {
+            v11: 'http://proxy.com/proxy/path/image.jpg',
+            v12: 'http://proxy.com/proxy/path/image.jpg' }]};
+      assets_proxy.proxyContextAssets(context);
+      assert.deepEqual(context, expected);
+    });
+
+    it('replaces subcontext assets URLs by proxies URLs', function() {
+      var expected = {
+        v1: 'http://resource.com/resource/path/image.jpg',
+        v2: 'http://resource.com/resource/path/image.jpg',
+        v3: {
+          v4: 'http://proxy.com/proxy/path/image.jpg',
+          v5: 'http://proxy.com/proxy/path/image.jpg',
+          v6: {
+            v7: 'http://proxy.com/proxy/path/image.jpg',
+            v8: 'http://proxy.com/proxy/path/image.jpg' },
+          v9: [
+            'http://proxy.com/proxy/path/image.jpg',
+            'http://proxy.com/proxy/path/image.jpg' ]},
+        v10: [
+          'http://resource.com/resource/path/image.jpg',
+          'http://resource.com/resource/path/image.jpg',
+          [
+            'http://resource.com/resource/path/image.jpg',
+            'http://resource.com/resource/path/image.jpg' ],
+          {
+            v11: 'http://resource.com/resource/path/image.jpg',
+            v12: 'http://resource.com/resource/path/image.jpg' }]};
+      assets_proxy.proxyContextAssets(context.v3);
+      assert.deepEqual(context, expected);
+    });
+
+    it('replaces specific context assets URLs by proxies URLs', function() {
+      var expected = {
         v1: 'http://proxy.com/proxy/path/image.jpg',
         v2: 'http://resource.com/resource/path/image.jpg',
         v3: {
@@ -92,8 +148,34 @@ describe('AssetsProxy', function() {
           {
             v11: 'http://proxy.com/proxy/path/image.jpg',
             v12: 'http://resource.com/resource/path/image.jpg' }]};
-      assets_proxy.proxyContextAssets(from, ['v1', 'v3.v4', 'v3.v6.v7', 'v3.v9', 'v10', 'v10.v11']);
-      assert.deepEqual(from, to);
+      assets_proxy.proxyContextAssets(context, ['v1', 'v3.v4', 'v3.v6.v7', 'v3.v9', 'v10', 'v10.v11']);
+      assert.deepEqual(context, expected);
+    });
+
+    it('replaces specific subcontext assets URLs by proxies URLs', function() {
+      var expected = {
+        v1: 'http://resource.com/resource/path/image.jpg',
+        v2: 'http://resource.com/resource/path/image.jpg',
+        v3: {
+          v4: 'http://proxy.com/proxy/path/image.jpg',
+          v5: 'http://resource.com/resource/path/image.jpg',
+          v6: {
+            v7: 'http://proxy.com/proxy/path/image.jpg',
+            v8: 'http://resource.com/resource/path/image.jpg' },
+          v9: [
+            'http://proxy.com/proxy/path/image.jpg',
+            'http://proxy.com/proxy/path/image.jpg' ]},
+        v10: [
+          'http://resource.com/resource/path/image.jpg',
+          'http://resource.com/resource/path/image.jpg',
+          [
+            'http://resource.com/resource/path/image.jpg',
+            'http://resource.com/resource/path/image.jpg' ],
+          {
+            v11: 'http://resource.com/resource/path/image.jpg',
+            v12: 'http://resource.com/resource/path/image.jpg' }]};
+      assets_proxy.proxyContextAssets(context.v3, ['v4', 'v6.v7', 'v9']);
+      assert.deepEqual(context, expected);
     });
   });
 

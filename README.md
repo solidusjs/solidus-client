@@ -174,6 +174,117 @@ var solidus_client = new SolidusClient({resources_options: resources_options});
 solidus_client.resources_options = resources_options;
 ```
 
+# Utilities
+
+## Assets Proxy
+
+This library can be used both server and client side, to replace assets URLs with proxy URLs. For example, all URLs starting with `http://resource1.com/images` in a resource string in the context could be replaced to `http://mysite.proxy.com/resource1/...` in a preprocessor.
+
+### Initialization
+
+```javascript
+var AssetsProxy = require('solidus-client/lib/assets_proxy');
+var assets_to_proxy = [
+  {
+    resource: 'http://resource1.com/images',
+    proxy:    'http://mysite.proxy.com/resource1'
+  },
+  {
+    resource: 'http://resource2.com/pictures',
+    proxy:    'http://mysite.proxy.com/resource2'
+  }
+];
+var assets_proxy = new AssetsProxy(assets_to_proxy);
+```
+
+### `proxyAssets`
+
+Replaces all matching assets URLs in a string.
+
+```javascript
+// Preprocessor
+module.exports = function(context) {
+  // http://resource1.com/images/backgrounds/red.jpg -> http://mysite.proxy.com/resource1/backgrounds/red.jpg
+  context.some.value = assets_proxy.proxyAssets(context.some.value);
+
+  return context;
+};
+```
+
+### `proxyContextAssets`
+
+Runs `proxyAssets` on all strings in a context, recursively and in place. The second argument is an optional list of paths to limit the changes to.
+
+```javascript
+// Preprocessor
+module.exports = function(context) {
+  // Replace all string values in the context
+  assets_proxy.proxyContextAssets(context);
+
+  // Or only a single resource
+  assets_proxy.proxyContextAssets(context.resource1);
+
+  // Or only specific paths
+  assets_proxy.proxyContextAssets(context, ['resource1.some.value', 'resource2.some.value']);
+
+  return context;
+};
+```
+
+### `redirects`
+
+Configuring the proxy for assets from multiple hosts can be cumbersome. `redirects` returns all the Solidus redirects to effectively turn Solidus into a single proxy for all the assets hosts. For example, configure your proxy like this:
+
+```
+http://mysite.proxy.com -> http://mysite.com
+
+// Instead of
+http://mysite.proxy.com/resource1 -> http://resource1.com/images
+http://mysite.proxy.com/resource2 -> http://resource2.com/pictures
+```
+
+And add the redirects to your site's `redirects.js` file:
+
+```javascript
+// Existing site redirects
+module.exports = [...];
+
+// Add redirects for proxied assets
+module.exports = module.exports.concat(assets_proxy.redirects());
+
+// It's the same thing as adding this:
+module.exports = module.exports.concat([
+  {
+    from: new RegExp('^/resource1/(.*)'),
+    to:   'http://resource1.com/images/{0}'
+  },
+  {
+    from: new RegExp('^/resource2/(.*)'),
+    to:   'http://resource2.com/pictures/{0}'
+  }
+]);
+```
+
+When a browser will request `http://mysite.proxy.com/resource1/red.jpg`, the proxy will retrieve the image from `http://mysite.com/resource1/red.jpg`, which is a redirect to `http://resource1.com/images/red.jpg`, where the real data is hosted. This way, it's not necessary to setup each resource separately on the proxy, that configuration is already available on the site itself.
+
+By default, the path part of `proxy` is used as the Solidus redirect path. That value can also be specified in the AssetsProxy configuration:
+
+```javascript
+var assets_to_proxy = [
+  // Will redirect /resource1 to http://resource1.com/images
+  {
+    resource: 'http://resource1.com/images',
+    proxy:    'http://mysite.proxy.com/resource1'
+  },
+  // Will redirect /resource2 (instead of /mysite/resource2) to http://resource2.com/pictures
+  {
+    resource: 'http://resource2.com/pictures',
+    proxy:    'http://www.proxy2.com/mysite/resource2',
+    redirect: '/resource2'
+  }
+];
+```
+
 # Building
 
 ```
