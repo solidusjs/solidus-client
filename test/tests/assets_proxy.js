@@ -27,8 +27,8 @@ describe('AssetsProxy', function() {
         proxy:    'http://p'
       }]);
 
-      var from = '"https://r/a" \'https://r/b\' https://r/c (https://r/d)';
-      var to   = '"http://p/https%3A%2F%2Fr%2Fa" \'http://p/https%3A%2F%2Fr%2Fb\' http://p/https%3A%2F%2Fr%2Fc (http://p/https%3A%2F%2Fr%2Fd)';
+      var from = '"https://r/a" \'https://r/b\' https://r/c (https://r/d) "https://r/a?a=b"';
+      var to   = '"http://p/https%3A%2F%2Fr%2Fa" \'http://p/https%3A%2F%2Fr%2Fb\' http://p/https%3A%2F%2Fr%2Fc (http://p/https%3A%2F%2Fr%2Fd) "http://p/https%3A%2F%2Fr%2Fa?a=b"';
       assert.equal(assets_proxy.proxyAssets(from), to);
     });
 
