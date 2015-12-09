@@ -174,6 +174,63 @@ var solidus_client = new SolidusClient({resources_options: resources_options});
 solidus_client.resources_options = resources_options;
 ```
 
+# Utilities
+
+## Assets Proxy
+
+This library can be used both server and client side, to replace assets URLs with proxy URLs. For example, all strings containing URLs starting with `http://resource1.com/images` in a context could be replaced to `http://mysite.proxy.com/resource1/...` in a preprocessor.
+
+### Initialization
+
+```javascript
+var AssetsProxy = require('solidus-client/lib/assets_proxy');
+var assets_to_proxy = [
+  {
+    resource: 'http://resource1.com/images',
+    proxy:    'http://mysite.proxy.com/resource1'
+  },
+  {
+    resource: 'http://resource2.com/pictures',
+    proxy:    'http://mysite.proxy.com/resource2'
+  }
+];
+var assets_proxy = new AssetsProxy(assets_to_proxy);
+```
+
+### `proxyAssets`
+
+Replaces all matching assets URLs in a string.
+
+```javascript
+// Preprocessor
+module.exports = function(context) {
+  // http://resource1.com/images/backgrounds/red.jpg -> http://mysite.proxy.com/resource1/backgrounds/red.jpg
+  context.some.value = assets_proxy.proxyAssets(context.some.value);
+
+  return context;
+};
+```
+
+### `proxyContextAssets`
+
+Runs `proxyAssets` on all strings in a context, recursively and in place. The second argument is an optional list of paths to limit the changes to.
+
+```javascript
+// Preprocessor
+module.exports = function(context) {
+  // Replace all string values in the context
+  assets_proxy.proxyContextAssets(context);
+
+  // Or only a single resource
+  assets_proxy.proxyContextAssets(context.resource1);
+
+  // Or only specific paths
+  assets_proxy.proxyContextAssets(context, ['resource1.some.value', 'resource2.some.value']);
+
+  return context;
+};
+```
+
 # Building
 
 ```
