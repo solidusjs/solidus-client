@@ -87,7 +87,7 @@ SolidusClient.prototype.render = function(view, params, callback) {
 
 module.exports = SolidusClient;
 
-},{"./lib/resource.js":3,"./lib/view.js":5,"events":7,"handlebars-helper":12,"underscore":118,"util":11}],2:[function(_dereq_,module,exports){
+},{"./lib/resource.js":3,"./lib/view.js":5,"events":7,"handlebars-helper":15,"underscore":121,"util":14}],2:[function(_dereq_,module,exports){
 /*
  * Copyright (c) 2010 Nick Galbreath
  * http://code.google.com/p/stringencoders/source/browse/#svn/trunk/javascript
@@ -248,15 +248,17 @@ Resource.prototype.requestType = function() {
   return 'client';
 };
 
-// String that can be used as a cache key, represents everything that is unique about the request
-Resource.prototype.key = function() {
-  var parts = [requestUrl.call(this)];
-  if (this.requestType() === 'client') {
-    if (this.options.headers) parts.push(JSON.stringify(this.options.headers));
-    if (this.options.auth) parts.push(JSON.stringify(_.pick(this.options.auth, 'user', 'pass')));
-    if (this.options.with_credentials && !util.isNode) parts.push(JSON.stringify({with_credentials: true}));
+Resource.prototype.requestUrl = function() {
+  if (!this.url) return;
+
+  switch (this.requestType()) {
+  case 'proxy':
+    return proxyRequestUrl.call(this);
+  case 'jsonp':
+    return jsonpRequestUrl.call(this);
+  case 'client':
+    return clientRequestUrl.call(this);
   }
-  return parts.join('|');
 };
 
 Resource.prototype.get = function(callback) {
@@ -338,19 +340,6 @@ var request = function(method, data, callback) {
     result.data = data;
     callback(err, result);
   });
-};
-
-var requestUrl = function() {
-  if (!this.url) return;
-
-  switch (this.requestType()) {
-  case 'proxy':
-    return proxyRequestUrl.call(this);
-  case 'jsonp':
-    return jsonpRequestUrl.call(this);
-  case 'client':
-    return clientRequestUrl.call(this);
-  }
 };
 
 var proxyRequest = function(method, data, callback) {
@@ -516,12 +505,16 @@ var processDataStatus = function(data, callback) {
 
 module.exports = Resource;
 
-},{"./base64":2,"./util":4,"extend":6,"qs":110,"superagent":115,"underscore":118}],4:[function(_dereq_,module,exports){
+},{"./base64":2,"./util":4,"extend":6,"qs":113,"superagent":118,"underscore":121}],4:[function(_dereq_,module,exports){
+var qs = _dereq_('querystring');
+
 module.exports.isNode = !(typeof window !== 'undefined' && window !== null);
 
 module.exports.supportsCORS = !module.exports.isNode && (typeof XMLHttpRequest !== 'undefined') && ('withCredentials' in new XMLHttpRequest());
 
-},{}],5:[function(_dereq_,module,exports){
+module.exports.params = !module.exports.isNode?qs.parse(window.location.search.split('?').pop()):{};
+
+},{"querystring":12}],5:[function(_dereq_,module,exports){
 var _ = _dereq_('underscore');
 
 var util = _dereq_('./util');
@@ -664,22 +657,14 @@ var preprocessContextAsync = function(callback) {
 
 module.exports = View;
 
-},{"./util":4,"underscore":118}],6:[function(_dereq_,module,exports){
+},{"./util":4,"underscore":121}],6:[function(_dereq_,module,exports){
 var hasOwn = Object.prototype.hasOwnProperty;
-var toStr = Object.prototype.toString;
+var toString = Object.prototype.toString;
 var undefined;
-
-var isArray = function isArray(arr) {
-	if (typeof Array.isArray === 'function') {
-		return Array.isArray(arr);
-	}
-
-	return toStr.call(arr) === '[object Array]';
-};
 
 var isPlainObject = function isPlainObject(obj) {
 	'use strict';
-	if (!obj || toStr.call(obj) !== '[object Object]') {
+	if (!obj || toString.call(obj) !== '[object Object]') {
 		return false;
 	}
 
@@ -731,10 +716,10 @@ module.exports = function extend() {
 				}
 
 				// Recurse if we're merging plain objects or arrays
-				if (deep && copy && (isPlainObject(copy) || (copyIsArray = isArray(copy)))) {
+				if (deep && copy && (isPlainObject(copy) || (copyIsArray = Array.isArray(copy)))) {
 					if (copyIsArray) {
 						copyIsArray = false;
-						clone = src && isArray(src) ? src : [];
+						clone = src && Array.isArray(src) ? src : [];
 					} else {
 						clone = src && isPlainObject(src) ? src : {};
 					}
@@ -1149,13 +1134,192 @@ process.chdir = function (dir) {
 };
 
 },{}],10:[function(_dereq_,module,exports){
+// Copyright Joyent, Inc. and other Node contributors.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a
+// copy of this software and associated documentation files (the
+// "Software"), to deal in the Software without restriction, including
+// without limitation the rights to use, copy, modify, merge, publish,
+// distribute, sublicense, and/or sell copies of the Software, and to permit
+// persons to whom the Software is furnished to do so, subject to the
+// following conditions:
+//
+// The above copyright notice and this permission notice shall be included
+// in all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
+// NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+// OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
+// USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+'use strict';
+
+// If obj.hasOwnProperty has been overridden, then calling
+// obj.hasOwnProperty(prop) will break.
+// See: https://github.com/joyent/node/issues/1707
+function hasOwnProperty(obj, prop) {
+  return Object.prototype.hasOwnProperty.call(obj, prop);
+}
+
+module.exports = function(qs, sep, eq, options) {
+  sep = sep || '&';
+  eq = eq || '=';
+  var obj = {};
+
+  if (typeof qs !== 'string' || qs.length === 0) {
+    return obj;
+  }
+
+  var regexp = /\+/g;
+  qs = qs.split(sep);
+
+  var maxKeys = 1000;
+  if (options && typeof options.maxKeys === 'number') {
+    maxKeys = options.maxKeys;
+  }
+
+  var len = qs.length;
+  // maxKeys <= 0 means that we should not limit keys count
+  if (maxKeys > 0 && len > maxKeys) {
+    len = maxKeys;
+  }
+
+  for (var i = 0; i < len; ++i) {
+    var x = qs[i].replace(regexp, '%20'),
+        idx = x.indexOf(eq),
+        kstr, vstr, k, v;
+
+    if (idx >= 0) {
+      kstr = x.substr(0, idx);
+      vstr = x.substr(idx + 1);
+    } else {
+      kstr = x;
+      vstr = '';
+    }
+
+    k = decodeURIComponent(kstr);
+    v = decodeURIComponent(vstr);
+
+    if (!hasOwnProperty(obj, k)) {
+      obj[k] = v;
+    } else if (isArray(obj[k])) {
+      obj[k].push(v);
+    } else {
+      obj[k] = [obj[k], v];
+    }
+  }
+
+  return obj;
+};
+
+var isArray = Array.isArray || function (xs) {
+  return Object.prototype.toString.call(xs) === '[object Array]';
+};
+
+},{}],11:[function(_dereq_,module,exports){
+// Copyright Joyent, Inc. and other Node contributors.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a
+// copy of this software and associated documentation files (the
+// "Software"), to deal in the Software without restriction, including
+// without limitation the rights to use, copy, modify, merge, publish,
+// distribute, sublicense, and/or sell copies of the Software, and to permit
+// persons to whom the Software is furnished to do so, subject to the
+// following conditions:
+//
+// The above copyright notice and this permission notice shall be included
+// in all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
+// NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+// OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
+// USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+'use strict';
+
+var stringifyPrimitive = function(v) {
+  switch (typeof v) {
+    case 'string':
+      return v;
+
+    case 'boolean':
+      return v ? 'true' : 'false';
+
+    case 'number':
+      return isFinite(v) ? v : '';
+
+    default:
+      return '';
+  }
+};
+
+module.exports = function(obj, sep, eq, name) {
+  sep = sep || '&';
+  eq = eq || '=';
+  if (obj === null) {
+    obj = undefined;
+  }
+
+  if (typeof obj === 'object') {
+    return map(objectKeys(obj), function(k) {
+      var ks = encodeURIComponent(stringifyPrimitive(k)) + eq;
+      if (isArray(obj[k])) {
+        return obj[k].map(function(v) {
+          return ks + encodeURIComponent(stringifyPrimitive(v));
+        }).join(sep);
+      } else {
+        return ks + encodeURIComponent(stringifyPrimitive(obj[k]));
+      }
+    }).join(sep);
+
+  }
+
+  if (!name) return '';
+  return encodeURIComponent(stringifyPrimitive(name)) + eq +
+         encodeURIComponent(stringifyPrimitive(obj));
+};
+
+var isArray = Array.isArray || function (xs) {
+  return Object.prototype.toString.call(xs) === '[object Array]';
+};
+
+function map (xs, f) {
+  if (xs.map) return xs.map(f);
+  var res = [];
+  for (var i = 0; i < xs.length; i++) {
+    res.push(f(xs[i], i));
+  }
+  return res;
+}
+
+var objectKeys = Object.keys || function (obj) {
+  var res = [];
+  for (var key in obj) {
+    if (Object.prototype.hasOwnProperty.call(obj, key)) res.push(key);
+  }
+  return res;
+};
+
+},{}],12:[function(_dereq_,module,exports){
+'use strict';
+
+exports.decode = exports.parse = _dereq_('./decode');
+exports.encode = exports.stringify = _dereq_('./encode');
+
+},{"./decode":10,"./encode":11}],13:[function(_dereq_,module,exports){
 module.exports = function isBuffer(arg) {
   return arg && typeof arg === 'object'
     && typeof arg.copy === 'function'
     && typeof arg.fill === 'function'
     && typeof arg.readUInt8 === 'function';
 }
-},{}],11:[function(_dereq_,module,exports){
+},{}],14:[function(_dereq_,module,exports){
 (function (process,global){
 // Copyright Joyent, Inc. and other Node contributors.
 //
@@ -1745,9 +1909,9 @@ function hasOwnProperty(obj, prop) {
 }
 
 }).call(this,_dereq_("IrXUsu"),typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./support/isBuffer":10,"IrXUsu":9,"inherits":8}],12:[function(_dereq_,module,exports){
+},{"./support/isBuffer":13,"IrXUsu":9,"inherits":8}],15:[function(_dereq_,module,exports){
 module.exports = _dereq_('./lib');
-},{"./lib":37}],13:[function(_dereq_,module,exports){
+},{"./lib":40}],16:[function(_dereq_,module,exports){
 module.exports = function(){
 	var numbers = Array.prototype.slice.call( arguments, 0, -1 );
 	var result = 0;
@@ -1756,7 +1920,7 @@ module.exports = function(){
 	}
 	return result;
 };
-},{}],14:[function(_dereq_,module,exports){
+},{}],17:[function(_dereq_,module,exports){
 // Modified form of `timeago` helper from https://github.com/assemble/handlebars-helpers
 
 var newDate = _dereq_('new-date');
@@ -1782,7 +1946,7 @@ module.exports = function( date ){
 	if( Math.floor( seconds ) <= 1 ) return 'Just now';
 	else return Math.floor( seconds ) +' seconds ago';
 };
-},{"new-date":104}],15:[function(_dereq_,module,exports){
+},{"new-date":107}],18:[function(_dereq_,module,exports){
 module.exports = function( collection, start, end, options ){
 	options = options || end;
 	if( typeof start !== 'number' ) return;
@@ -1794,7 +1958,7 @@ module.exports = function( collection, start, end, options ){
 	}
 	return result;
 };
-},{}],16:[function(_dereq_,module,exports){
+},{}],19:[function(_dereq_,module,exports){
 module.exports = function( collection, item, options ){
 	// string check
 	if( typeof collection === 'string' ){
@@ -1813,7 +1977,7 @@ module.exports = function( collection, item, options ){
 	}
 	return options.inverse(this);
 };
-},{}],17:[function(_dereq_,module,exports){
+},{}],20:[function(_dereq_,module,exports){
 module.exports = function(){
 	var numbers = Array.prototype.slice.call( arguments, 1, -1 );
 	var result = arguments[0];
@@ -1822,11 +1986,11 @@ module.exports = function(){
 	}
 	return result;
 };
-},{}],18:[function(_dereq_,module,exports){
+},{}],21:[function(_dereq_,module,exports){
 module.exports = function( string ){
 	return encodeURIComponent( string );	
 };
-},{}],19:[function(_dereq_,module,exports){
+},{}],22:[function(_dereq_,module,exports){
 module.exports = function( left, right, exact, options ){
 	options = options || exact;
 	exact = ( exact === 'exact' ) ? true : false;
@@ -1834,7 +1998,7 @@ module.exports = function( left, right, exact, options ){
 	if( is_equal ) return options.fn(this);
 	return options.inverse(this);
 };
-},{}],20:[function(_dereq_,module,exports){
+},{}],23:[function(_dereq_,module,exports){
 module.exports = function( collection, count, options ){
 	options = options || count;
 	count = ( typeof count === 'number' ) ? count : 1;
@@ -1849,7 +2013,7 @@ module.exports = function( collection, count, options ){
 	}
 	return result;
 };
-},{}],21:[function(_dereq_,module,exports){
+},{}],24:[function(_dereq_,module,exports){
 var strftimeTZ = _dereq_('strftime').strftimeTZ;
 var newDate = _dereq_('new-date');
 
@@ -1858,7 +2022,7 @@ module.exports = function( date_string, format, offset ){
 	var date = newDate( date_string );
 	return strftimeTZ( format, date, offset );
 };
-},{"new-date":104,"strftime":109}],22:[function(_dereq_,module,exports){
+},{"new-date":107,"strftime":112}],25:[function(_dereq_,module,exports){
 module.exports = function( left, right, equal, options ){
 	options = options || equal;
 	equal = ( equal === 'equal' ) ? true : false;
@@ -1866,7 +2030,7 @@ module.exports = function( left, right, equal, options ){
 	if( is_greater ) return options.fn( this );
 	return options.inverse( this );
 };
-},{}],23:[function(_dereq_,module,exports){
+},{}],26:[function(_dereq_,module,exports){
 module.exports = function( collection, separator ){
 	separator = ( typeof separator === 'string' ) ? separator : '';
 	// if the collectoin is an array this is easy
@@ -1880,7 +2044,7 @@ module.exports = function( collection, separator ){
 	}
 	return result.slice( 0, -separator.length );
 };
-},{}],24:[function(_dereq_,module,exports){
+},{}],27:[function(_dereq_,module,exports){
 var _isArray = _dereq_('lodash.isarray');
 var _reduce = _dereq_('lodash.reduce');
 
@@ -1904,7 +2068,7 @@ module.exports = function( collection, count, options ){
 	}, '' );
 	return result;
 };
-},{"lodash.isarray":38,"lodash.reduce":40}],25:[function(_dereq_,module,exports){
+},{"lodash.isarray":41,"lodash.reduce":43}],28:[function(_dereq_,module,exports){
 module.exports = function( collection ){
 	if( collection.length ) return collection.length;
 	var length = 0;
@@ -1915,7 +2079,7 @@ module.exports = function( collection ){
 	}
 	return length;
 };
-},{}],26:[function(_dereq_,module,exports){
+},{}],29:[function(_dereq_,module,exports){
 module.exports = function( left, right, equal, options ){
 	options = options || equal;
 	equal = ( equal === 'equal' ) ? true : false;
@@ -1923,11 +2087,11 @@ module.exports = function( left, right, equal, options ){
 	if( is_greater ) return options.fn( this );
 	return options.inverse( this );
 };
-},{}],27:[function(_dereq_,module,exports){
+},{}],30:[function(_dereq_,module,exports){
 module.exports = function( string ){
 	return ( string || '' ).toLowerCase();	
 };
-},{}],28:[function(_dereq_,module,exports){
+},{}],31:[function(_dereq_,module,exports){
 module.exports = function(){
 	var numbers = Array.prototype.slice.call( arguments, 1, -1 );
 	var result = arguments[0];
@@ -1936,7 +2100,7 @@ module.exports = function(){
 	}
 	return result;
 };
-},{}],29:[function(_dereq_,module,exports){
+},{}],32:[function(_dereq_,module,exports){
 module.exports = function( collection, start, amount, options ){
 	options = options || amount;
 	if( typeof start !== 'number' ) return;
@@ -1948,11 +2112,11 @@ module.exports = function( collection, start, amount, options ){
 	}
 	return result;
 };
-},{}],30:[function(_dereq_,module,exports){
+},{}],33:[function(_dereq_,module,exports){
 module.exports = function( string, to_replace, replacement ){
 	return ( string || '' ).replace( to_replace, replacement );
 };
-},{}],31:[function(_dereq_,module,exports){
+},{}],34:[function(_dereq_,module,exports){
 module.exports = function( collection, options ){
 	var result = '';
 	for( var i = collection.length - 1; i >= 0; i-- ){
@@ -1960,7 +2124,7 @@ module.exports = function( collection, options ){
 	}
 	return result;
 };
-},{}],32:[function(_dereq_,module,exports){
+},{}],35:[function(_dereq_,module,exports){
 // Simple shuffling method based off of http://bost.ocks.org/mike/shuffle/
 var shuffle = function( array ){
 	var i = array.length, j, swap;
@@ -1981,7 +2145,7 @@ module.exports = function( collection, options ){
 	}
 	return result;
 };
-},{}],33:[function(_dereq_,module,exports){
+},{}],36:[function(_dereq_,module,exports){
 module.exports = function(){
 	var numbers = Array.prototype.slice.call( arguments, 1, -1 );
 	var result = parseFloat( arguments[0], 10 );
@@ -1990,7 +2154,7 @@ module.exports = function(){
 	}
 	return result;
 };
-},{}],34:[function(_dereq_,module,exports){
+},{}],37:[function(_dereq_,module,exports){
 module.exports = function( number, zero, options ){
 	options = options || zero;
 	zero = ( zero === 'zero' ) ? true : false;
@@ -2004,11 +2168,11 @@ module.exports = function( number, zero, options ){
 	}
 	return result;
 };
-},{}],35:[function(_dereq_,module,exports){
+},{}],38:[function(_dereq_,module,exports){
 module.exports = function( string ){
 	return ( string || '' ).toUpperCase();
 };
-},{}],36:[function(_dereq_,module,exports){
+},{}],39:[function(_dereq_,module,exports){
 module.exports = function( collection, key, value, limit, options ){
 	options = options || limit;
 	if( typeof limit !== 'number' ) limit = Infinity;
@@ -2023,7 +2187,7 @@ module.exports = function( collection, key, value, limit, options ){
 	}
 	return result;
 };
-},{}],37:[function(_dereq_,module,exports){
+},{}],40:[function(_dereq_,module,exports){
 var helpers = {
 	// string
 	lowercase: _dereq_('./helpers/lowercase.js'),
@@ -2064,7 +2228,7 @@ module.exports.help = function( Handlebars ){
 
 module.exports.helpers = helpers;
 
-},{"./helpers/add.js":13,"./helpers/ago.js":14,"./helpers/between.js":15,"./helpers/contains.js":16,"./helpers/divide.js":17,"./helpers/encode.js":18,"./helpers/equal.js":19,"./helpers/first.js":20,"./helpers/formatDate.js":21,"./helpers/greater.js":22,"./helpers/join.js":23,"./helpers/last.js":24,"./helpers/length.js":25,"./helpers/less.js":26,"./helpers/lowercase.js":27,"./helpers/multiply.js":28,"./helpers/range.js":29,"./helpers/replace.js":30,"./helpers/reverse.js":31,"./helpers/shuffle.js":32,"./helpers/subtract.js":33,"./helpers/times.js":34,"./helpers/uppercase.js":35,"./helpers/where.js":36}],38:[function(_dereq_,module,exports){
+},{"./helpers/add.js":16,"./helpers/ago.js":17,"./helpers/between.js":18,"./helpers/contains.js":19,"./helpers/divide.js":20,"./helpers/encode.js":21,"./helpers/equal.js":22,"./helpers/first.js":23,"./helpers/formatDate.js":24,"./helpers/greater.js":25,"./helpers/join.js":26,"./helpers/last.js":27,"./helpers/length.js":28,"./helpers/less.js":29,"./helpers/lowercase.js":30,"./helpers/multiply.js":31,"./helpers/range.js":32,"./helpers/replace.js":33,"./helpers/reverse.js":34,"./helpers/shuffle.js":35,"./helpers/subtract.js":36,"./helpers/times.js":37,"./helpers/uppercase.js":38,"./helpers/where.js":39}],41:[function(_dereq_,module,exports){
 /**
  * Lo-Dash 2.4.1 (Custom Build) <http://lodash.com/>
  * Build: `lodash modularize modern exports="npm" -o ./npm/`
@@ -2111,7 +2275,7 @@ var isArray = nativeIsArray || function(value) {
 
 module.exports = isArray;
 
-},{"lodash._isnative":39}],39:[function(_dereq_,module,exports){
+},{"lodash._isnative":42}],42:[function(_dereq_,module,exports){
 /**
  * Lo-Dash 2.4.1 (Custom Build) <http://lodash.com/>
  * Build: `lodash modularize modern exports="npm" -o ./npm/`
@@ -2147,7 +2311,7 @@ function isNative(value) {
 
 module.exports = isNative;
 
-},{}],40:[function(_dereq_,module,exports){
+},{}],43:[function(_dereq_,module,exports){
 /**
  * Lo-Dash 2.4.1 (Custom Build) <http://lodash.com/>
  * Build: `lodash modularize modern exports="npm" -o ./npm/`
@@ -2216,9 +2380,9 @@ function reduce(collection, callback, accumulator, thisArg) {
 
 module.exports = reduce;
 
-},{"lodash.createcallback":41,"lodash.forown":77}],41:[function(_dereq_,module,exports){
+},{"lodash.createcallback":44,"lodash.forown":80}],44:[function(_dereq_,module,exports){
 /**
- * Lo-Dash 2.4.3 (Custom Build) <http://lodash.com/>
+ * Lo-Dash 2.4.1 (Custom Build) <http://lodash.com/>
  * Build: `lodash modularize modern exports="npm" -o ./npm/`
  * Copyright 2012-2013 The Dojo Foundation <http://dojofoundation.org/>
  * Based on Underscore.js 1.5.2 <http://underscorejs.org/LICENSE>
@@ -2299,7 +2463,7 @@ function createCallback(func, thisArg, argCount) {
 
 module.exports = createCallback;
 
-},{"lodash._basecreatecallback":42,"lodash._baseisequal":61,"lodash.isobject":70,"lodash.keys":72,"lodash.property":76}],42:[function(_dereq_,module,exports){
+},{"lodash._basecreatecallback":45,"lodash._baseisequal":64,"lodash.isobject":73,"lodash.keys":75,"lodash.property":79}],45:[function(_dereq_,module,exports){
 /**
  * Lo-Dash 2.4.1 (Custom Build) <http://lodash.com/>
  * Build: `lodash modularize modern exports="npm" -o ./npm/`
@@ -2381,7 +2545,7 @@ function baseCreateCallback(func, thisArg, argCount) {
 
 module.exports = baseCreateCallback;
 
-},{"lodash._setbinddata":43,"lodash.bind":46,"lodash.identity":58,"lodash.support":59}],43:[function(_dereq_,module,exports){
+},{"lodash._setbinddata":46,"lodash.bind":49,"lodash.identity":61,"lodash.support":62}],46:[function(_dereq_,module,exports){
 /**
  * Lo-Dash 2.4.1 (Custom Build) <http://lodash.com/>
  * Build: `lodash modularize modern exports="npm" -o ./npm/`
@@ -2426,9 +2590,9 @@ var setBindData = !defineProperty ? noop : function(func, value) {
 
 module.exports = setBindData;
 
-},{"lodash._isnative":44,"lodash.noop":45}],44:[function(_dereq_,module,exports){
-module.exports=_dereq_(39)
-},{}],45:[function(_dereq_,module,exports){
+},{"lodash._isnative":47,"lodash.noop":48}],47:[function(_dereq_,module,exports){
+module.exports=_dereq_(42)
+},{}],48:[function(_dereq_,module,exports){
 /**
  * Lo-Dash 2.4.1 (Custom Build) <http://lodash.com/>
  * Build: `lodash modularize modern exports="npm" -o ./npm/`
@@ -2456,7 +2620,7 @@ function noop() {
 
 module.exports = noop;
 
-},{}],46:[function(_dereq_,module,exports){
+},{}],49:[function(_dereq_,module,exports){
 /**
  * Lo-Dash 2.4.1 (Custom Build) <http://lodash.com/>
  * Build: `lodash modularize modern exports="npm" -o ./npm/`
@@ -2498,7 +2662,7 @@ function bind(func, thisArg) {
 
 module.exports = bind;
 
-},{"lodash._createwrapper":47,"lodash._slice":57}],47:[function(_dereq_,module,exports){
+},{"lodash._createwrapper":50,"lodash._slice":60}],50:[function(_dereq_,module,exports){
 /**
  * Lo-Dash 2.4.1 (Custom Build) <http://lodash.com/>
  * Build: `lodash modularize modern exports="npm" -o ./npm/`
@@ -2606,7 +2770,7 @@ function createWrapper(func, bitmask, partialArgs, partialRightArgs, thisArg, ar
 
 module.exports = createWrapper;
 
-},{"lodash._basebind":48,"lodash._basecreatewrapper":52,"lodash._slice":57,"lodash.isfunction":56}],48:[function(_dereq_,module,exports){
+},{"lodash._basebind":51,"lodash._basecreatewrapper":55,"lodash._slice":60,"lodash.isfunction":59}],51:[function(_dereq_,module,exports){
 /**
  * Lo-Dash 2.4.1 (Custom Build) <http://lodash.com/>
  * Build: `lodash modularize modern exports="npm" -o ./npm/`
@@ -2670,7 +2834,7 @@ function baseBind(bindData) {
 
 module.exports = baseBind;
 
-},{"lodash._basecreate":49,"lodash._setbinddata":43,"lodash._slice":57,"lodash.isobject":70}],49:[function(_dereq_,module,exports){
+},{"lodash._basecreate":52,"lodash._setbinddata":46,"lodash._slice":60,"lodash.isobject":73}],52:[function(_dereq_,module,exports){
 (function (global){
 /**
  * Lo-Dash 2.4.1 (Custom Build) <http://lodash.com/>
@@ -2716,11 +2880,11 @@ if (!nativeCreate) {
 module.exports = baseCreate;
 
 }).call(this,typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"lodash._isnative":50,"lodash.isobject":70,"lodash.noop":51}],50:[function(_dereq_,module,exports){
-module.exports=_dereq_(39)
-},{}],51:[function(_dereq_,module,exports){
-module.exports=_dereq_(45)
-},{}],52:[function(_dereq_,module,exports){
+},{"lodash._isnative":53,"lodash.isobject":73,"lodash.noop":54}],53:[function(_dereq_,module,exports){
+module.exports=_dereq_(42)
+},{}],54:[function(_dereq_,module,exports){
+module.exports=_dereq_(48)
+},{}],55:[function(_dereq_,module,exports){
 /**
  * Lo-Dash 2.4.1 (Custom Build) <http://lodash.com/>
  * Build: `lodash modularize modern exports="npm" -o ./npm/`
@@ -2800,13 +2964,13 @@ function baseCreateWrapper(bindData) {
 
 module.exports = baseCreateWrapper;
 
-},{"lodash._basecreate":53,"lodash._setbinddata":43,"lodash._slice":57,"lodash.isobject":70}],53:[function(_dereq_,module,exports){
-module.exports=_dereq_(49)
-},{"lodash._isnative":54,"lodash.isobject":70,"lodash.noop":55}],54:[function(_dereq_,module,exports){
-module.exports=_dereq_(39)
-},{}],55:[function(_dereq_,module,exports){
-module.exports=_dereq_(45)
-},{}],56:[function(_dereq_,module,exports){
+},{"lodash._basecreate":56,"lodash._setbinddata":46,"lodash._slice":60,"lodash.isobject":73}],56:[function(_dereq_,module,exports){
+module.exports=_dereq_(52)
+},{"lodash._isnative":57,"lodash.isobject":73,"lodash.noop":58}],57:[function(_dereq_,module,exports){
+module.exports=_dereq_(42)
+},{}],58:[function(_dereq_,module,exports){
+module.exports=_dereq_(48)
+},{}],59:[function(_dereq_,module,exports){
 /**
  * Lo-Dash 2.4.1 (Custom Build) <http://lodash.com/>
  * Build: `lodash modularize modern exports="npm" -o ./npm/`
@@ -2835,7 +2999,7 @@ function isFunction(value) {
 
 module.exports = isFunction;
 
-},{}],57:[function(_dereq_,module,exports){
+},{}],60:[function(_dereq_,module,exports){
 /**
  * Lo-Dash 2.4.1 (Custom Build) <http://lodash.com/>
  * Build: `lodash modularize modern exports="npm" -o ./npm/`
@@ -2875,7 +3039,7 @@ function slice(array, start, end) {
 
 module.exports = slice;
 
-},{}],58:[function(_dereq_,module,exports){
+},{}],61:[function(_dereq_,module,exports){
 /**
  * Lo-Dash 2.4.1 (Custom Build) <http://lodash.com/>
  * Build: `lodash modularize modern exports="npm" -o ./npm/`
@@ -2905,7 +3069,7 @@ function identity(value) {
 
 module.exports = identity;
 
-},{}],59:[function(_dereq_,module,exports){
+},{}],62:[function(_dereq_,module,exports){
 (function (global){
 /**
  * Lo-Dash 2.4.1 (Custom Build) <http://lodash.com/>
@@ -2949,9 +3113,9 @@ support.funcNames = typeof Function.name == 'string';
 module.exports = support;
 
 }).call(this,typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"lodash._isnative":60}],60:[function(_dereq_,module,exports){
-module.exports=_dereq_(39)
-},{}],61:[function(_dereq_,module,exports){
+},{"lodash._isnative":63}],63:[function(_dereq_,module,exports){
+module.exports=_dereq_(42)
+},{}],64:[function(_dereq_,module,exports){
 /**
  * Lo-Dash 2.4.1 (Custom Build) <http://lodash.com/>
  * Build: `lodash modularize modern exports="npm" -o ./npm/`
@@ -3162,7 +3326,7 @@ function baseIsEqual(a, b, callback, isWhere, stackA, stackB) {
 
 module.exports = baseIsEqual;
 
-},{"lodash._getarray":62,"lodash._objecttypes":64,"lodash._releasearray":65,"lodash.forin":68,"lodash.isfunction":69}],62:[function(_dereq_,module,exports){
+},{"lodash._getarray":65,"lodash._objecttypes":67,"lodash._releasearray":68,"lodash.forin":71,"lodash.isfunction":72}],65:[function(_dereq_,module,exports){
 /**
  * Lo-Dash 2.4.1 (Custom Build) <http://lodash.com/>
  * Build: `lodash modularize modern exports="npm" -o ./npm/`
@@ -3185,7 +3349,7 @@ function getArray() {
 
 module.exports = getArray;
 
-},{"lodash._arraypool":63}],63:[function(_dereq_,module,exports){
+},{"lodash._arraypool":66}],66:[function(_dereq_,module,exports){
 /**
  * Lo-Dash 2.4.1 (Custom Build) <http://lodash.com/>
  * Build: `lodash modularize modern exports="npm" -o ./npm/`
@@ -3200,7 +3364,7 @@ var arrayPool = [];
 
 module.exports = arrayPool;
 
-},{}],64:[function(_dereq_,module,exports){
+},{}],67:[function(_dereq_,module,exports){
 /**
  * Lo-Dash 2.4.1 (Custom Build) <http://lodash.com/>
  * Build: `lodash modularize modern exports="npm" -o ./npm/`
@@ -3222,7 +3386,7 @@ var objectTypes = {
 
 module.exports = objectTypes;
 
-},{}],65:[function(_dereq_,module,exports){
+},{}],68:[function(_dereq_,module,exports){
 /**
  * Lo-Dash 2.4.1 (Custom Build) <http://lodash.com/>
  * Build: `lodash modularize modern exports="npm" -o ./npm/`
@@ -3249,9 +3413,9 @@ function releaseArray(array) {
 
 module.exports = releaseArray;
 
-},{"lodash._arraypool":66,"lodash._maxpoolsize":67}],66:[function(_dereq_,module,exports){
-module.exports=_dereq_(63)
-},{}],67:[function(_dereq_,module,exports){
+},{"lodash._arraypool":69,"lodash._maxpoolsize":70}],69:[function(_dereq_,module,exports){
+module.exports=_dereq_(66)
+},{}],70:[function(_dereq_,module,exports){
 /**
  * Lo-Dash 2.4.1 (Custom Build) <http://lodash.com/>
  * Build: `lodash modularize modern exports="npm" -o ./npm/`
@@ -3266,7 +3430,7 @@ var maxPoolSize = 40;
 
 module.exports = maxPoolSize;
 
-},{}],68:[function(_dereq_,module,exports){
+},{}],71:[function(_dereq_,module,exports){
 /**
  * Lo-Dash 2.4.1 (Custom Build) <http://lodash.com/>
  * Build: `lodash modularize modern exports="npm" -o ./npm/`
@@ -3322,9 +3486,9 @@ var forIn = function(collection, callback, thisArg) {
 
 module.exports = forIn;
 
-},{"lodash._basecreatecallback":42,"lodash._objecttypes":64}],69:[function(_dereq_,module,exports){
-module.exports=_dereq_(56)
-},{}],70:[function(_dereq_,module,exports){
+},{"lodash._basecreatecallback":45,"lodash._objecttypes":67}],72:[function(_dereq_,module,exports){
+module.exports=_dereq_(59)
+},{}],73:[function(_dereq_,module,exports){
 /**
  * Lo-Dash 2.4.1 (Custom Build) <http://lodash.com/>
  * Build: `lodash modularize modern exports="npm" -o ./npm/`
@@ -3365,9 +3529,9 @@ function isObject(value) {
 
 module.exports = isObject;
 
-},{"lodash._objecttypes":71}],71:[function(_dereq_,module,exports){
-module.exports=_dereq_(64)
-},{}],72:[function(_dereq_,module,exports){
+},{"lodash._objecttypes":74}],74:[function(_dereq_,module,exports){
+module.exports=_dereq_(67)
+},{}],75:[function(_dereq_,module,exports){
 /**
  * Lo-Dash 2.4.1 (Custom Build) <http://lodash.com/>
  * Build: `lodash modularize modern exports="npm" -o ./npm/`
@@ -3405,9 +3569,9 @@ var keys = !nativeKeys ? shimKeys : function(object) {
 
 module.exports = keys;
 
-},{"lodash._isnative":73,"lodash._shimkeys":74,"lodash.isobject":70}],73:[function(_dereq_,module,exports){
-module.exports=_dereq_(39)
-},{}],74:[function(_dereq_,module,exports){
+},{"lodash._isnative":76,"lodash._shimkeys":77,"lodash.isobject":73}],76:[function(_dereq_,module,exports){
+module.exports=_dereq_(42)
+},{}],77:[function(_dereq_,module,exports){
 /**
  * Lo-Dash 2.4.1 (Custom Build) <http://lodash.com/>
  * Build: `lodash modularize modern exports="npm" -o ./npm/`
@@ -3447,9 +3611,9 @@ var shimKeys = function(object) {
 
 module.exports = shimKeys;
 
-},{"lodash._objecttypes":75}],75:[function(_dereq_,module,exports){
-module.exports=_dereq_(64)
-},{}],76:[function(_dereq_,module,exports){
+},{"lodash._objecttypes":78}],78:[function(_dereq_,module,exports){
+module.exports=_dereq_(67)
+},{}],79:[function(_dereq_,module,exports){
 /**
  * Lo-Dash 2.4.1 (Custom Build) <http://lodash.com/>
  * Build: `lodash modularize modern exports="npm" -o ./npm/`
@@ -3491,7 +3655,7 @@ function property(key) {
 
 module.exports = property;
 
-},{}],77:[function(_dereq_,module,exports){
+},{}],80:[function(_dereq_,module,exports){
 /**
  * Lo-Dash 2.4.1 (Custom Build) <http://lodash.com/>
  * Build: `lodash modularize modern exports="npm" -o ./npm/`
@@ -3543,59 +3707,59 @@ var forOwn = function(collection, callback, thisArg) {
 
 module.exports = forOwn;
 
-},{"lodash._basecreatecallback":78,"lodash._objecttypes":99,"lodash.keys":100}],78:[function(_dereq_,module,exports){
-module.exports=_dereq_(42)
-},{"lodash._setbinddata":79,"lodash.bind":82,"lodash.identity":96,"lodash.support":97}],79:[function(_dereq_,module,exports){
-module.exports=_dereq_(43)
-},{"lodash._isnative":80,"lodash.noop":81}],80:[function(_dereq_,module,exports){
-module.exports=_dereq_(39)
-},{}],81:[function(_dereq_,module,exports){
+},{"lodash._basecreatecallback":81,"lodash._objecttypes":102,"lodash.keys":103}],81:[function(_dereq_,module,exports){
 module.exports=_dereq_(45)
-},{}],82:[function(_dereq_,module,exports){
+},{"lodash._setbinddata":82,"lodash.bind":85,"lodash.identity":99,"lodash.support":100}],82:[function(_dereq_,module,exports){
 module.exports=_dereq_(46)
-},{"lodash._createwrapper":83,"lodash._slice":95}],83:[function(_dereq_,module,exports){
-module.exports=_dereq_(47)
-},{"lodash._basebind":84,"lodash._basecreatewrapper":89,"lodash._slice":95,"lodash.isfunction":94}],84:[function(_dereq_,module,exports){
+},{"lodash._isnative":83,"lodash.noop":84}],83:[function(_dereq_,module,exports){
+module.exports=_dereq_(42)
+},{}],84:[function(_dereq_,module,exports){
 module.exports=_dereq_(48)
-},{"lodash._basecreate":85,"lodash._setbinddata":79,"lodash._slice":95,"lodash.isobject":88}],85:[function(_dereq_,module,exports){
+},{}],85:[function(_dereq_,module,exports){
 module.exports=_dereq_(49)
-},{"lodash._isnative":86,"lodash.isobject":88,"lodash.noop":87}],86:[function(_dereq_,module,exports){
-module.exports=_dereq_(39)
-},{}],87:[function(_dereq_,module,exports){
-module.exports=_dereq_(45)
-},{}],88:[function(_dereq_,module,exports){
-module.exports=_dereq_(70)
-},{"lodash._objecttypes":99}],89:[function(_dereq_,module,exports){
+},{"lodash._createwrapper":86,"lodash._slice":98}],86:[function(_dereq_,module,exports){
+module.exports=_dereq_(50)
+},{"lodash._basebind":87,"lodash._basecreatewrapper":92,"lodash._slice":98,"lodash.isfunction":97}],87:[function(_dereq_,module,exports){
+module.exports=_dereq_(51)
+},{"lodash._basecreate":88,"lodash._setbinddata":82,"lodash._slice":98,"lodash.isobject":91}],88:[function(_dereq_,module,exports){
 module.exports=_dereq_(52)
-},{"lodash._basecreate":90,"lodash._setbinddata":79,"lodash._slice":95,"lodash.isobject":93}],90:[function(_dereq_,module,exports){
-module.exports=_dereq_(49)
-},{"lodash._isnative":91,"lodash.isobject":93,"lodash.noop":92}],91:[function(_dereq_,module,exports){
-module.exports=_dereq_(39)
-},{}],92:[function(_dereq_,module,exports){
-module.exports=_dereq_(45)
-},{}],93:[function(_dereq_,module,exports){
-module.exports=_dereq_(70)
-},{"lodash._objecttypes":99}],94:[function(_dereq_,module,exports){
-module.exports=_dereq_(56)
+},{"lodash._isnative":89,"lodash.isobject":91,"lodash.noop":90}],89:[function(_dereq_,module,exports){
+module.exports=_dereq_(42)
+},{}],90:[function(_dereq_,module,exports){
+module.exports=_dereq_(48)
+},{}],91:[function(_dereq_,module,exports){
+module.exports=_dereq_(73)
+},{"lodash._objecttypes":102}],92:[function(_dereq_,module,exports){
+module.exports=_dereq_(55)
+},{"lodash._basecreate":93,"lodash._setbinddata":82,"lodash._slice":98,"lodash.isobject":96}],93:[function(_dereq_,module,exports){
+module.exports=_dereq_(52)
+},{"lodash._isnative":94,"lodash.isobject":96,"lodash.noop":95}],94:[function(_dereq_,module,exports){
+module.exports=_dereq_(42)
 },{}],95:[function(_dereq_,module,exports){
-module.exports=_dereq_(57)
+module.exports=_dereq_(48)
 },{}],96:[function(_dereq_,module,exports){
-module.exports=_dereq_(58)
-},{}],97:[function(_dereq_,module,exports){
+module.exports=_dereq_(73)
+},{"lodash._objecttypes":102}],97:[function(_dereq_,module,exports){
 module.exports=_dereq_(59)
-},{"lodash._isnative":98}],98:[function(_dereq_,module,exports){
-module.exports=_dereq_(39)
+},{}],98:[function(_dereq_,module,exports){
+module.exports=_dereq_(60)
 },{}],99:[function(_dereq_,module,exports){
-module.exports=_dereq_(64)
+module.exports=_dereq_(61)
 },{}],100:[function(_dereq_,module,exports){
-module.exports=_dereq_(72)
-},{"lodash._isnative":101,"lodash._shimkeys":102,"lodash.isobject":103}],101:[function(_dereq_,module,exports){
-module.exports=_dereq_(39)
+module.exports=_dereq_(62)
+},{"lodash._isnative":101}],101:[function(_dereq_,module,exports){
+module.exports=_dereq_(42)
 },{}],102:[function(_dereq_,module,exports){
-module.exports=_dereq_(74)
-},{"lodash._objecttypes":99}],103:[function(_dereq_,module,exports){
-module.exports=_dereq_(70)
-},{"lodash._objecttypes":99}],104:[function(_dereq_,module,exports){
+module.exports=_dereq_(67)
+},{}],103:[function(_dereq_,module,exports){
+module.exports=_dereq_(75)
+},{"lodash._isnative":104,"lodash._shimkeys":105,"lodash.isobject":106}],104:[function(_dereq_,module,exports){
+module.exports=_dereq_(42)
+},{}],105:[function(_dereq_,module,exports){
+module.exports=_dereq_(77)
+},{"lodash._objecttypes":102}],106:[function(_dereq_,module,exports){
+module.exports=_dereq_(73)
+},{"lodash._objecttypes":102}],107:[function(_dereq_,module,exports){
 
 var is = _dereq_('is')
   , isodate = _dereq_('isodate')
@@ -3635,7 +3799,7 @@ function toMs (num) {
   if (num < 31557600000) return num * 1000;
   return num;
 }
-},{"./milliseconds":105,"./seconds":106,"is":107,"isodate":108}],105:[function(_dereq_,module,exports){
+},{"./milliseconds":108,"./seconds":109,"is":110,"isodate":111}],108:[function(_dereq_,module,exports){
 
 /**
  * Matcher.
@@ -3667,7 +3831,7 @@ exports.parse = function (millis) {
   millis = parseInt(millis, 10);
   return new Date(millis);
 };
-},{}],106:[function(_dereq_,module,exports){
+},{}],109:[function(_dereq_,module,exports){
 
 /**
  * Matcher.
@@ -3699,7 +3863,7 @@ exports.parse = function (seconds) {
   var millis = parseInt(seconds, 10) * 1000;
   return new Date(millis);
 };
-},{}],107:[function(_dereq_,module,exports){
+},{}],110:[function(_dereq_,module,exports){
 
 /**!
  * is
@@ -4403,7 +4567,7 @@ is.string = function (value) {
 };
 
 
-},{}],108:[function(_dereq_,module,exports){
+},{}],111:[function(_dereq_,module,exports){
 
 /**
  * Matcher, slightly modified from:
@@ -4472,7 +4636,7 @@ exports.is = function (string, strict) {
   if (strict && false === /^\d{4}-\d{2}-\d{2}/.test(string)) return false;
   return matcher.test(string);
 };
-},{}],109:[function(_dereq_,module,exports){
+},{}],112:[function(_dereq_,module,exports){
 //
 // strftime
 // github.com/samsonjs/strftime
@@ -4746,10 +4910,10 @@ exports.is = function (string, strict) {
 
 }());
 
-},{}],110:[function(_dereq_,module,exports){
+},{}],113:[function(_dereq_,module,exports){
 module.exports = _dereq_('./lib/');
 
-},{"./lib/":111}],111:[function(_dereq_,module,exports){
+},{"./lib/":114}],114:[function(_dereq_,module,exports){
 // Load modules
 
 var Stringify = _dereq_('./stringify');
@@ -4766,7 +4930,7 @@ module.exports = {
     parse: Parse
 };
 
-},{"./parse":112,"./stringify":113}],112:[function(_dereq_,module,exports){
+},{"./parse":115,"./stringify":116}],115:[function(_dereq_,module,exports){
 // Load modules
 
 var Utils = _dereq_('./utils');
@@ -4798,7 +4962,11 @@ internals.parseValues = function (str, options) {
             var key = Utils.decode(part.slice(0, pos));
             var val = Utils.decode(part.slice(pos + 1));
 
-            if (!Object.prototype.hasOwnProperty.call(obj, key)) {
+            if (Object.prototype.hasOwnProperty(key)) {
+                continue;
+            }
+
+            if (!obj.hasOwnProperty(key)) {
                 obj[key] = val;
             }
             else {
@@ -4925,7 +5093,7 @@ module.exports = function (str, options) {
     return Utils.compact(obj);
 };
 
-},{"./utils":114}],113:[function(_dereq_,module,exports){
+},{"./utils":117}],116:[function(_dereq_,module,exports){
 // Load modules
 
 var Utils = _dereq_('./utils');
@@ -5024,7 +5192,7 @@ module.exports = function (obj, options) {
     return keys.join(delimiter);
 };
 
-},{"./utils":114}],114:[function(_dereq_,module,exports){
+},{"./utils":117}],117:[function(_dereq_,module,exports){
 // Load modules
 
 
@@ -5158,7 +5326,7 @@ exports.isBuffer = function (obj) {
         obj.constructor.isBuffer(obj));
 };
 
-},{}],115:[function(_dereq_,module,exports){
+},{}],118:[function(_dereq_,module,exports){
 /**
  * Module dependencies.
  */
@@ -6271,7 +6439,7 @@ request.put = function(url, data, fn){
 
 module.exports = request;
 
-},{"emitter":116,"reduce":117}],116:[function(_dereq_,module,exports){
+},{"emitter":119,"reduce":120}],119:[function(_dereq_,module,exports){
 
 /**
  * Expose `Emitter`.
@@ -6437,7 +6605,7 @@ Emitter.prototype.hasListeners = function(event){
   return !! this.listeners(event).length;
 };
 
-},{}],117:[function(_dereq_,module,exports){
+},{}],120:[function(_dereq_,module,exports){
 
 /**
  * Reduce `arr` with `fn`.
@@ -6462,7 +6630,7 @@ module.exports = function(arr, fn, initial){
   
   return curr;
 };
-},{}],118:[function(_dereq_,module,exports){
+},{}],121:[function(_dereq_,module,exports){
 //     Underscore.js 1.6.0
 //     http://underscorejs.org
 //     (c) 2009-2014 Jeremy Ashkenas, DocumentCloud and Investigative Reporters & Editors

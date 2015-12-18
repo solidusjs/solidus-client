@@ -1,3 +1,19 @@
+## 1.3.3 (Dec 18, 2015)
+
+ - Remove resource.key() [[a88aa1b](https://github.com/solidusjs/solidus-client/commit/a88aa1b80608f4b0444d0ab31461782fb4d681e8)]
+
+## 1.3.2 (Nov 27, 2015)
+
+ - Fixed breaking test [[1d82f1f](https://github.com/solidusjs/solidus-client/commit/1d82f1f14b7649fd9d2b96f3beb0d5e2e3385840)]
+
+## 1.3.1 (Nov 25, 2015)
+
+ - Check if WordPress revision terms are blank and replace them with original terms for previews [[ed1fc0c](https://github.com/solidusjs/solidus-client/commit/ed1fc0cabe8acd4b488096f0a80a3bb84bd67385)]
+
+## 1.3.0 (Nov 10, 2015)
+
+ - Add WordPress helper library with .getPostPreviewView function [[24cd1f6](https://github.com/solidusjs/solidus-client/commit/24cd1f664e9fc7dbe07b27ac09d7e8239d7f04ee)]
+
 ## 1.2.2 (Apr 16, 2015)
 
  - Fix CORS and JSONP on older browsers [[2ba8659](https://github.com/solidusjs/solidus-client/commit/2ba86591c8e6419a1b4a94a77780598f77562eb3)]
