@@ -265,7 +265,7 @@ describe('Resource', function() {
     it('with timeout', function(done) {
       var resource = new Resource({url: host + '/with-delay', timeout: 1});
       resource.get(function(err, res) {
-        assert.equal(err.message, 'timeout of 1ms exceeded');
+        assert.equal(err.message, 'Timeout of 1ms exceeded');
         assert(!res.data)
         done();
       });
@@ -303,7 +303,7 @@ describe('Resource', function() {
         it('with timeout', function(done) {
           var resource = new Resource({url: 'http://solidus.com/with-delay', proxy: true, timeout: 1});
           resource.get(function(err, res) {
-            assert.equal(err.message, 'timeout of 1ms exceeded');
+            assert.equal(err.message, 'Timeout of 1ms exceeded');
             assert(!res.data)
             done();
           });
@@ -324,7 +324,7 @@ describe('Resource', function() {
           var called;
           var resource = new Resource({url: host + '/with-delay', jsonp: true, timeout: 1});
           resource.get(function(err, res) {
-            assert.equal(err.message, 'timeout of 1ms exceeded');
+            assert.equal(err.message, 'Timeout of 1ms exceeded');
             assert(!res.data);
             assert(!called);
             called = true;
@@ -345,7 +345,7 @@ describe('Resource', function() {
           var called;
           var resource = new Resource({url: 'http://localhost:8888', jsonp: true, timeout: 1});
           resource.get(function(err, res) {
-            assert.equal(err.message, 'timeout of 1ms exceeded');
+            assert.equal(err.message, 'Timeout of 1ms exceeded');
             assert(!res.data);
             assert(!called);
             called = true;
