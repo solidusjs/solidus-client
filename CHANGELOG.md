@@ -1,3 +1,7 @@
+## 1.3.4 (Nov 28, 2017)
+
+ - Update SuperAgent to 3.8.1 [[0aec006](https://github.com/solidusjs/solidus-client/commit/0aec006301bf18f311c02deab676b61b540f2104)]
+
 ## 1.3.3 (Dec 18, 2015)
 
  - Remove resource.key() [[a88aa1b](https://github.com/solidusjs/solidus-client/commit/a88aa1b80608f4b0444d0ab31461782fb4d681e8)]
