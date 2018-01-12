@@ -14,23 +14,38 @@ var browserStackConfig = {
 }
 
 var setups = [
-  {browser: 'Chrome'},
-  {browser: 'Chrome', browser_version: '35.0'},
-  {browser: 'Safari'},
-  {browser: 'Safari', browser_version: '6.1'},
-  {browser: 'IE'},
-  {browser: 'IE', browser_version: '10.0'},
-  {browser: 'IE', browser_version: '9.0'},
-  {browser: 'Firefox'},
-  {browser: 'Firefox', browser_version: '30.0'},
-  {device: 'iPhone 5S'},
-  {device: 'iPhone 5'},
-  {device: 'LG Nexus 4'},
-  {device: 'Motorola Razr'}
+  {browserName: 'Chrome'},
+  {browserName: 'Safari', browser_version: '11.0'},
+  {browserName: 'Safari', browser_version: '10.1'},
+  {browserName: 'Safari', browser_version: '9.1'},
+  {browserName: 'IE', browser_version: '11.0'},
+  {browserName: 'IE', browser_version: '10.0'},
+  {browserName: 'IE', browser_version: '9.0'},
+  {browserName: 'Edge', browser_version: '16.0'},
+  {browserName: 'Edge', browser_version: '15.0'},
+  {browserName: 'Edge', browser_version: '14.0'},
+  {browserName: 'Firefox'},
+  {browserName: 'Opera'},
+  {device: 'iPhone X', realMobile: true},
+  {device: 'iPhone 8', realMobile: true},
+  {device: 'iPhone 7', realMobile: true},
+  {device: 'iPad 5th', realMobile: true},
+  {device: 'Samsung Galaxy Note 8', realMobile: true},
+  {device: 'Samsung Galaxy S8', realMobile: true},
+  {device: 'Samsung Galaxy S7', realMobile: true},
+  {device: 'Samsung Galaxy S6', realMobile: true},
+  {device: 'Samsung Galaxy Note 4', realMobile: true},
+  {device: 'Motorola Moto X 2nd Gen', realMobile: true},
+  {device: 'Motorola Moto X 2nd Gen', os_version: '5.0', realMobile: true},
+  {device: 'Google Pixel', realMobile: true},
+  {device: 'Google Pixel', os_version: '7.1', realMobile: true},
+  {device: 'Google Nexus 6', realMobile: true},
+  {device: 'Google Nexus 5', realMobile: true},
+  {device: 'Google Nexus 9', realMobile: true}
 ];
 
 setups.forEach(function (setup) {
-  test.describe(_.compact([setup.browser, setup.browser_version, setup.device]).join(', '), function() {
+  test.describe(_.compact([setup.device, setup.os_version, setup.browserName, setup.browser_version]).join(', '), function() {
     var driver;
 
     test.before(function() {

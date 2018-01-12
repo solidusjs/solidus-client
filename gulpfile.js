@@ -90,20 +90,13 @@ gulp.task('stop-test-server', function(callback) {
 
 var browserstack_tunnel;
 gulp.task('start-browserstack-tunnel', function(callback) {
-  var port = 3000;
-
   browserstack_tunnel = new BrowserStackTunnel({
     key: 'TODO',
-    hosts: [{
-      name: 'localhost',
-      port: port,
-      sslFlag: 0
-    }],
     v: true
   });
 
   browserstack_tunnel.start(function(err) {
-    if (!err) gutil.log('BrowserStack tunnel started on', gutil.colors.green('http://localhost:' + port));
+    if (!err) gutil.log('BrowserStack tunnel started');
     callback(err);
   });
 });

@@ -2,8 +2,9 @@ var fs   = require('fs');
 var zlib = require('zlib');
 var url  = require('url');
 
+// Safari doesn't like localhost, see https://www.browserstack.com/question/663
 module.exports.port = 8081;
-module.exports.host = 'http://localhost:' + module.exports.port;
+module.exports.host = 'http://lvh.me:' + module.exports.port;
 
 module.exports.routes = function (req, res) {
   if (req.url.indexOf('/test/browser/') == 0) {
