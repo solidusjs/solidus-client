@@ -1,3 +1,8 @@
+## 1.3.5 (Apr 23, 2018)
+
+ - Use BrowserStack real devices [[5d4113b](https://github.com/solidusjs/solidus-client/commit/5d4113b4edad97ae1968e8f98576383a8761f489)]
+ - Update SuperAgent to 3.8.2 [[c8d2ab3](https://github.com/solidusjs/solidus-client/commit/c8d2ab36362b34397d6245a407823d59c20ac7bf)]
+
 ## 1.3.4 (Nov 28, 2017)
 
  - Update SuperAgent to 3.8.1 [[0aec006](https://github.com/solidusjs/solidus-client/commit/0aec006301bf18f311c02deab676b61b540f2104)]
