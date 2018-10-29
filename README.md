@@ -35,15 +35,14 @@ Rendering a template starts with the `render` function call, and ends with the `
    - `proxy` - Whether to fetch the resource through Solidus, instead of directly hitting the resource URL. If `true`, all other options are ignored. Defaults to `false`.
    - `solidus_api_route` - Route to the Solidus `resource.json` endpoint if `proxy` is `true`. Defaults to `/api/`.
    - `timeout` - Maximum time to wait for the resource, in milliseconds. Defaults to 20,000.
-   - `optional` - If `true` and the resource cannot be fetched, the template is rendered anyway. Defaults to `false`.
-
-  Error conditions:
-   - HTTP error, like a network error.
-   - Timeout is exceeded.
-   - Returned status code is not in the 2xx range.
-   - Returned data is not valid JSON.
-   - Returned data has a root property named `status` with value `error`.
-
+   - `optional` - If `true` and the resource cannot be fetched, the template is rendered anyway. Defaults to `false`. Error conditions:
+     - Invalid URL.
+     - A required `param` is missing.
+     - HTTP error, like a network error.
+     - Timeout is exceeded.
+     - Returned status code is not in the 2xx range.
+     - Returned data is not valid JSON.
+     - Returned data has a root property named `status` with value `error`.
  - `params` - Object of named values. The values will be interpolated into the dynamic resource urls.
   ```javascript
   var params = {
@@ -51,6 +50,7 @@ Rendering a template starts with the `render` function call, and ends with the `
   };
   ```
 
+ - `required_params` - Array of required param names. If any param is missing, an error is returned.
  - `preprocessor` - Function that modifies the context. The preprocessor is run after the resources are fetched, but before the template is rendered. If an error occurs while running the preprocessor, the template is not rendered.
   ```javascript
   // Sync

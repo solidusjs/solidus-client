@@ -12,6 +12,7 @@ describe('Resource', function() {
       var resource = new Resource('http://solidus.com/page');
       assert.equal(resource.url, 'http://solidus.com/page');
       assert(!resource.dynamic);
+      assert.deepEqual(resource.expanded_params, []);
       assert.deepEqual(resource.options, {timeout: 20000});
       done();
     });
@@ -20,6 +21,7 @@ describe('Resource', function() {
       var resource = new Resource({url: 'http://solidus.com/page', timeout: 10000, a: 1});
       assert.equal(resource.url, 'http://solidus.com/page');
       assert(!resource.dynamic);
+      assert.deepEqual(resource.expanded_params, []);
       assert.deepEqual(resource.options, {timeout: 10000, a: 1});
       done();
     });
@@ -34,6 +36,7 @@ describe('Resource', function() {
       var resource = new Resource({url: 'http://solidus.com/page', a: 1, g: {j: 3}}, resources_options);
       assert.equal(resource.url, 'http://solidus.com/page');
       assert(!resource.dynamic);
+      assert.deepEqual(resource.expanded_params, []);
       assert.deepEqual(resource.options, {timeout: 10000, a: 1, b: 4, d: 1, e: 1, g: {h: 2, i: 2, j: 3}});
       done();
     });
@@ -44,6 +47,7 @@ describe('Resource', function() {
       var resource = new Resource('http://solidus.com/{a}?b={b}&c={c}', resources_options, params);
       assert.equal(resource.url, 'http://solidus.com/1?b=2&c=');
       assert(resource.dynamic);
+      assert.deepEqual(resource.expanded_params, ['a', 'b', 'd']);
       assert.deepEqual(resource.options, {timeout: 20000, query: {d: '3', e: ''}});
       done();
     });
@@ -54,6 +58,7 @@ describe('Resource', function() {
       var resource = new Resource('http://solidus.com/page', resources_options, params);
       assert.equal(resource.url, 'http://solidus.com/page');
       assert(resource.dynamic);
+      assert.deepEqual(resource.expanded_params, ['a']);
       assert.deepEqual(resource.options, {timeout: 20000, query: {a: 'a'}});
       done();
     });
@@ -62,6 +67,7 @@ describe('Resource', function() {
       var resource = new Resource('not a url');
       assert.equal(resource.url, null);
       assert(!resource.dynamic);
+      assert.deepEqual(resource.expanded_params, []);
       assert.deepEqual(resource.options, {timeout: 20000});
       done();
     });
@@ -120,20 +126,31 @@ describe('Resource', function() {
       });
     });
 
-    it('with connection error', function(done) {
-      // If this test fails, maybe you have something running on port 8888?
-      var resource = new Resource('http://localhost:8888');
+    it('with invalid url', function(done) {
+      var resource = new Resource('not a url');
       resource.get(function(err, res) {
-        assert(err);
+        assert.equal(err, null);
         assert(!res.data);
         done();
       });
     });
 
-    it('with invalid url', function(done) {
-      var resource = new Resource('not a url');
+    it('with missing required params', function(done) {
+      var resources_options = {'.*': {query: {g: '{g}', h: '{h}', i: '{i}'}, required_params: ['a', 'b', 'd', 'e', 'g', 'h']}};
+      var params = {a: 1, d: 2, g: 3};
+      var resource = new Resource('http://solidus.com/{a}/{b}/{c}?d={d}&e={e}&f={f}', resources_options, params);
       resource.get(function(err, res) {
-        assert.equal(err, null);
+        assert.equal(err.message, 'Missing required params: b, e, h');
+        assert(!res.data);
+        done();
+      });
+    });
+
+    it('with connection error', function(done) {
+      // If this test fails, maybe you have something running on port 8888?
+      var resource = new Resource('http://localhost:8888');
+      resource.get(function(err, res) {
+        assert(err);
         assert(!res.data);
         done();
       });
