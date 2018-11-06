@@ -1,3 +1,7 @@
+## 1.4.0 (Nov 6, 2018)
+
+ - Required params [[7de41bb](https://github.com/solidusjs/solidus-client/commit/7de41bb21c1c3731c0edf9d25655e589ce370e6d)]
+
 ## 1.3.5 (Apr 23, 2018)
 
  - Use BrowserStack real devices [[5d4113b](https://github.com/solidusjs/solidus-client/commit/5d4113b4edad97ae1968e8f98576383a8761f489)]
