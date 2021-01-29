@@ -36,7 +36,7 @@
     "run-sequence": "~1.0.1"
   },
   "dependencies": {
-    "extend": "^2.0.0",
+    "extend": "^2.0.2",
     "handlebars-helper": ">=0.0.12",
     "qs": "^2.4.1",
     "superagent": "^3.8.2",
