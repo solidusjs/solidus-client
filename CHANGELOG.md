@@ -1,3 +1,7 @@
+## 1.4.1 (Jan 29, 2021)
+
+ - Update extend, to prevent __proto__ attack [[a376c83](https://github.com/solidusjs/solidus-client/commit/a376c831087a1745c00977dedc274f65451d21da)]
+
 ## 1.4.0 (Nov 6, 2018)
 
  - Required params [[7de41bb](https://github.com/solidusjs/solidus-client/commit/7de41bb21c1c3731c0edf9d25655e589ce370e6d)]
